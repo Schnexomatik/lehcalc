@@ -1,0 +1,820 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LEH Sizing Calculator</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body{ box-sizing:border-box; font-family:'Inter', -apple-system, BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
+    .brand-gradient{ background:#e7e7df; }
+    .glass-effect{ background:rgba(255,255,255,.95); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,.2);}
+    .card-shadow{ box-shadow:0 20px 25px -5px rgba(0,0,0,.1), 0 10px 10px -5px rgba(0,0,0,.04); }
+
+    /* Section color tokens */
+    :root{
+      --sys:#ff5000;        /* System (orange) */
+      --sys-dark:#e04500;
+      --env:#02a880;        /* Environment (teal) */
+      --env-dark:#028a6b;
+      --track:#d1d5db;      /* Neutral slider track */
+    }
+
+    /* Sliders (track fill painted via JS) */
+    .slider{ -webkit-appearance:none; appearance:none; height:8px; border-radius:4px; background:var(--track); outline:0; }
+    .system-slider::-webkit-slider-thumb{ -webkit-appearance:none; width:24px; height:24px; border-radius:50%; border:0; background:linear-gradient(135deg,var(--sys),var(--sys-dark)); box-shadow:0 4px 12px rgba(255,80,0,.35); }
+    .system-slider::-moz-range-thumb{ width:24px; height:24px; border-radius:50%; border:0; background:linear-gradient(135deg,var(--sys),var(--sys-dark)); box-shadow:0 4px 12px rgba(255,80,0,.35); }
+    .env-slider::-webkit-slider-thumb{ -webkit-appearance:none; width:24px; height:24px; border-radius:50%; border:0; background:linear-gradient(135deg,var(--env),var(--env-dark)); box-shadow:0 4px 12px rgba(2,168,128,.35); }
+    .env-slider::-moz-range-thumb{ width:24px; height:24px; border-radius:50%; border:0; background:linear-gradient(135deg,var(--env),var(--env-dark)); box-shadow:0 4px 12px rgba(2,168,128,.35); }
+
+    .input-field{ transition:all .2s ease; border-radius:8px;}
+    .system-input{ border-color:var(--sys)!important;}
+    .system-input:focus{ box-shadow:0 4px 12px rgba(255,80,0,.25)!important; border-color:var(--sys)!important;}
+    .env-input{ border-color:var(--env)!important;}
+    .env-input:focus{ box-shadow:0 4px 12px rgba(2,168,128,.25)!important; border-color:var(--env)!important;}
+
+    .radio-option{ transition:all .2s ease; border-radius:8px;}
+    .radio-option:hover{ transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,.08);}
+    .system-radio.selected{ background:linear-gradient(135deg,var(--sys),var(--sys-dark))!important; border-color:var(--sys)!important; color:#fff!important;}
+    .env-radio.selected{ background:linear-gradient(135deg,var(--env),var(--env-dark))!important; border-color:var(--env)!important; color:#fff!important;}
+
+    /* Gauges */
+    .gauge-container{ background:#e7e7df; border:1px solid rgba(0,0,0,.06); }
+
+    /* PV preview */
+    #pvPreview{ position:relative; display:inline-block; min-width:140px; min-height:140px; }
+    .pv-square{ position:absolute; border:3px solid var(--env); border-radius:8px; background:linear-gradient(135deg,rgba(2,168,128,.08),rgba(2,138,107,.08)); }
+    #pvFrame{ position:absolute; border:2px dashed #34d399; border-radius:6px; pointer-events:none; }
+
+    /* INSIDE active-square labels */
+    #pvLabelTop{ position:absolute; font-size:12px; color:#065f46; }
+    #pvLabelLeft{ position:absolute; font-size:12px; color:#065f46; writing-mode:vertical-rl; text-orientation:mixed; }
+
+    /* Footprint labels (right + bottom) */
+    .frameLabel{ position:absolute; font-size:12px; color:#065f46; background:rgba(255,255,255,.85); padding:2px 6px; border-radius:6px; border:1px solid #a7f3d0; }
+    #pvFrameLabelRight{ writing-mode:vertical-rl; text-orientation:mixed; }
+    #pvFrameLabelBottom{ }
+
+    /* Logo animation */
+    @keyframes float{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+    .floating{ animation:float 6s ease-in-out infinite;}
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+</head>
+<body class="brand-gradient min-h-full p-6">
+  <div class="max-w-7xl mx-auto glass-effect rounded-3xl card-shadow overflow-hidden">
+    <div class="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 text-white p-8">
+      <div class="flex items-center justify-center mb-4">
+        <svg class="w-12 h-12 mr-4 floating" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <defs><linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#3b82f6"/><stop offset="50%" stop-color="#06b6d4"/><stop offset="100%" stop-color="#10b981"/></linearGradient></defs>
+          <rect x="10" y="10" width="80" height="80" rx="12" fill="url(#logoGradient)" opacity=".9"/>
+          <path d="M35 25 L55 25 L45 45 L60 45 L40 75 L50 55 L35 55 Z" fill="white" opacity=".9"/>
+          <path d="M20 30 L30 30 M70 30 L80 30 M20 50 L30 50 M70 50 L80 50 M20 70 L30 70 M70 70 L80 70" stroke="white" stroke-width="2" opacity=".6"/>
+          <circle cx="25" cy="25" r="2" fill="white" opacity=".8"/><circle cx="75" cy="25" r="2" fill="white" opacity=".8"/>
+          <circle cx="25" cy="75" r="2" fill="white" opacity=".8"/><circle cx="75" cy="75" r="2" fill="white" opacity=".8"/>
+        </svg>
+        <div class="text-center">
+          <h1 id="app-title" class="text-4xl font-bold mb-2">LEH-enabled Asset Tracker</h1>
+          <p class="text-blue-200 text-lg font-medium">Advanced Energy Harvesting Calculator</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-8">
+      <!-- Controls -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <!-- System Parameters -->
+        <div class="p-8 rounded-2xl card-shadow border border-orange-200" style="background-color:#e7e7df;">
+          <div class="flex items-center mb-6">
+            <div class="w-3 h-8 rounded-full mr-4" style="background:linear-gradient(to bottom,var(--sys),var(--sys-dark));"></div>
+            <h3 class="text-2xl font-bold text-gray-800">System Parameters</h3>
+          </div>
+
+          <div class="mb-5">
+            <label class="block text-sm font-medium text-gray-700 mb-2" for="systemVoltage">System Voltage (V)</label>
+            <div class="flex items-center gap-4">
+              <input type="range" id="systemVoltage" class="slider system-slider flex-1" min="1.4" max="3.3" step="0.1" value="3.0">
+              <input type="number" id="systemVoltageNum" class="system-input input-field w-20 px-3 py-2 border-2 rounded-lg text-sm text-center bg-white focus:outline-none" min="1.4" max="3.3" step="0.1" value="3.0">
+            </div>
+          </div>
+
+          <div class="mb-5">
+            <label class="block text-sm font-medium text-gray-700 mb-2" for="intervalBetweenPulses">Interval Between Pulses (s)</label>
+            <div class="flex items-center gap-4">
+              <input type="range" id="intervalBetweenPulses" class="slider system-slider flex-1" min="1" max="3600" step="10" value="600">
+              <input type="number" id="intervalBetweenPulsesNum" class="system-input input-field w-20 px-3 py-2 border-2 rounded-lg text-sm text-center bg-white focus:outline-none" min="1" max="3600" step="10" value="600">
+            </div>
+          </div>
+
+          <div class="mb-5">
+            <label class="block text-sm font-medium text-gray-700 mb-2" for="sleepCurrent">Sleep Current (nA)</label>
+            <div class="flex items-center gap-4">
+              <input type="range" id="sleepCurrent" class="slider system-slider flex-1" min="0" max="1000" step="10" value="650">
+              <input type="number" id="sleepCurrentNum" class="system-input input-field w-20 px-3 py-2 border-2 rounded-lg text-sm text-center bg-white focus:outline-none" min="0" max="1000" step="10" value="650">
+            </div>
+          </div>
+
+          <div class="mb-5">
+            <label class="block text-sm font-medium text-gray-700 mb-2" for="pulseDuration">Pulse Duration (ms)</label>
+            <div class="flex items-center gap-4">
+              <input type="range" id="pulseDuration" class="slider system-slider flex-1" min="0.5" max="50" step="0.5" value="5">
+              <input type="number" id="pulseDurationNum" class="system-input input-field w-20 px-3 py-2 border-2 rounded-lg text-sm text-center bg-white focus:outline-none" min="0.5" max="50" step="0.5" value="5">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2" for="pulseCurrent">Pulse Current (mA)</label>
+            <div class="flex items-center gap-4">
+              <input type="range" id="pulseCurrent" class="slider system-slider flex-1" min="0.1" max="30" step="0.1" value="11">
+              <input type="number" id="pulseCurrentNum" class="system-input input-field w-20 px-3 py-2 border-2 rounded-lg text-sm text-center bg-white focus:outline-none" min="0.1" max="30" step="0.1" value="11">
+            </div>
+          </div>
+        </div>
+
+        <!-- Environmental Parameters -->
+        <div class="p-8 rounded-2xl card-shadow border border-emerald-200" style="background-color:#e7e7df;">
+          <div class="flex items-center mb-6">
+            <div class="w-3 h-8 rounded-full mr-4" style="background:linear-gradient(to bottom,var(--env),var(--env-dark));"></div>
+            <h3 class="text-2xl font-bold text-gray-800">Environmental Parameters</h3>
+          </div>
+
+          <div class="mb-5">
+            <label class="block text-sm font-medium text-gray-700 mb-2" for="lightIntensity">Light Intensity (lux)</label>
+            <div class="flex items-center gap-4">
+              <input type="range" id="lightIntensity" class="slider env-slider flex-1" min="1" max="2000" step="1" value="200">
+              <input type="number" id="lightIntensityNum" class="env-input input-field w-20 px-3 py-2 border-2 rounded-lg text-sm text-center bg-white focus:outline-none" min="1" max="2000" step="1" value="200">
+            </div>
+          </div>
+
+          <div class="mb-5">
+            <label class="block text-sm font-medium text-gray-700 mb-2" for="lightDuration">Light Duration per Day (min)</label>
+            <div class="flex items-center gap-4">
+              <input type="range" id="lightDuration" class="slider env-slider flex-1" min="1" max="1440" step="1" value="60">
+              <input type="number" id="lightDurationNum" class="env-input input-field w-20 px-3 py-2 border-2 rounded-lg text-sm text-center bg-white focus:outline-none" min="1" max="1440" step="1" value="60">
+            </div>
+          </div>
+
+          <div class="mb-5">
+            <label class="block text-sm font-medium text-gray-700 mb-3">Energy Storage Type</label>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <div class="env-radio radio-option flex items-center px-2 py-1 bg-white border-2 border-gray-300 rounded cursor-pointer" data-value="CR">
+                <input type="radio" name="storageType" value="CR" id="storage-cr" class="mr-1"><span class="text-xs">CR (1.5%/year)</span>
+              </div>
+              <div class="env-radio radio-option selected flex items-center px-2 py-1 rounded cursor-pointer text-white" data-value="LiPo" style="background:linear-gradient(135deg,var(--env),var(--env-dark)); border-color:var(--env);">
+                <input type="radio" name="storageType" value="LiPo" id="storage-lipo" checked class="mr-1"><span class="text-xs">LiPo (2.5%/mo)</span>
+              </div>
+              <div class="env-radio radio-option flex items-center px-2 py-1 bg-white border-2 border-gray-300 rounded cursor-pointer" data-value="LiFePO">
+                <input type="radio" name="storageType" value="LiFePO" id="storage-lifepo" class="mr-1"><span class="text-xs">LiFePO (1.5%/mo)</span>
+              </div>
+              <div class="env-radio radio-option flex items-center px-2 py-1 bg-white border-2 border-gray-300 rounded cursor-pointer" data-value="LTO">
+                <input type="radio" name="storageType" value="LTO" id="storage-lto" class="mr-1"><span class="text-xs">LTO (3%/mo)</span>
+              </div>
+              <div class="env-radio radio-option flex items-center px-2 py-1 bg-white border-2 border-gray-300 rounded cursor-pointer" data-value="NiMH">
+                <input type="radio" name="storageType" value="NiMH" id="storage-nimh" class="mr-1"><span class="text-xs">NiMH (1.5%/mo)</span>
+              </div>
+              <div class="env-radio radio-option flex items-center px-2 py-1 bg-white border-2 border-gray-300 rounded cursor-pointer" data-value="Supercap">
+                <input type="radio" name="storageType" value="Supercap" id="storage-supercap" class="mr-1"><span class="text-xs">Supercap (20%/mo)</span>
+              </div>
+              <div class="env-radio radio-option flex items-center px-2 py-1 bg-white border-2 border-gray-300 rounded cursor-pointer" data-value="Hybridcap">
+                <input type="radio" name="storageType" value="Hybridcap" id="storage-hybridcap" class="mr-1"><span class="text-xs">Hybridcap (20%/mo)</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-3">PM Solution</label>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div class="env-radio radio-option selected flex items-center px-2 py-1 rounded cursor-pointer text-white" data-value="PMIC" style="background:linear-gradient(135deg,var(--env),var(--env-dark)); border-color:var(--env);">
+                <input type="radio" name="pmSolution" value="PMIC" id="pm-pmic" checked class="mr-1"><span class="text-xs">Full PMIC (90%)</span>
+              </div>
+              <div class="env-radio radio-option flex items-center px-2 py-1 bg-white border-2 border-gray-300 rounded cursor-pointer" data-value="Discrete">
+                <input type="radio" name="pmSolution" value="Discrete" id="pm-discrete" class="mr-1"><span class="text-xs">Discrete (75%)</span>
+              </div>
+              <div class="env-radio radio-option flex items-center px-2 py-1 bg-white border-2 border-gray-300 rounded cursor-pointer" data-value="Direct">
+                <input type="radio" name="pmSolution" value="Direct" id="pm-direct" class="mr-1"><span class="text-xs">Direct-to-MCU (50%)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+        <!-- Shorter Daily Energy Consumption -->
+        <div class="gauge-container p-6 rounded-2xl card-shadow">
+          <div class="flex items-center justify-center mb-3">
+            <div class="w-2 h-6 rounded-full mr-3" style="background:linear-gradient(to bottom,#9470d8,#7c5cc7);"></div>
+            <h4 class="text-lg font-bold text-gray-800 text-center">Daily Energy Consumption</h4>
+          </div>
+
+          <div class="flex justify-center mb-2">
+            <div class="relative w-32 h-32">
+              <svg class="w-32 h-32 -rotate-90" viewBox="0 0 160 160">
+                <circle cx="80" cy="80" r="70" stroke="#9ca3af" stroke-width="18" fill="none"/>
+                <circle id="dailyEnergyGauge" cx="80" cy="80" r="70" stroke="url(#dailyGradient)" stroke-width="18" fill="none" stroke-linecap="round" stroke-dasharray="439.8229715" stroke-dashoffset="439.8229715" class="transition-all duration-700 ease-out"/>
+                <circle id="dailyOverflow" cx="80" cy="80" r="58" stroke="#7c5cc7" stroke-width="10" fill="none" stroke-linecap="round" stroke-dasharray="364.424747" stroke-dashoffset="364.424747" class="transition-all duration-700 ease-out opacity-0"/>
+                <defs>
+                  <linearGradient id="dailyGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#9470d8"/><stop offset="100%" stop-color="#7c5cc7"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <div id="dailyEnergy" class="text-xl font-bold" style="color:#9470d8;">0.000</div>
+                <div class="text-xs text-gray-600">mWh</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="text-xs text-gray-600 text-center space-y-1">
+            <div>Pulse: <span id="pulseEnergy" class="font-medium" style="color:#9470d8;">0.000</span> mWh/day</div>
+            <div>Sleep: <span id="sleepEnergy" class="font-medium" style="color:#7c5cc7;">0.000</span> mWh/day</div>
+          </div>
+        </div>
+
+        <!-- Shorter Energy Storage Requirements -->
+        <div class="gauge-container p-6 rounded-2xl card-shadow">
+          <div class="flex items-center justify-center mb-3">
+            <div class="w-2 h-6 rounded-full mr-3" style="background:linear-gradient(to bottom,#f9af19,#e09a0f);"></div>
+            <h4 class="text-lg font-bold text-gray-800 text-center">Energy Storage Requirements</h4>
+          </div>
+
+          <div class="flex justify-center mb-2">
+            <div class="relative w-32 h-32">
+              <svg class="w-32 h-32 -rotate-90" viewBox="0 0 160 160">
+                <circle cx="80" cy="80" r="70" stroke="#9ca3af" stroke-width="18" fill="none"/>
+                <circle id="storageGauge" cx="80" cy="80" r="70" stroke="url(#storageGradient)" stroke-width="18" fill="none" stroke-linecap="round" stroke-dasharray="439.8229715" stroke-dashoffset="439.8229715" class="transition-all duration-700 ease-out"/>
+                <circle id="storageOverflow" cx="80" cy="80" r="58" stroke="#e09a0f" stroke-width="10" fill="none" stroke-linecap="round" stroke-dasharray="364.424747" stroke-dashoffset="364.424747" class="transition-all duration-700 ease-out opacity-0"/>
+                <defs>
+                  <linearGradient id="storageGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#f9af19"/><stop offset="100%" stop-color="#e09a0f"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <div id="totalStorage" class="text-xl font-bold" style="color:#f9af19;">0.000</div>
+                <div class="text-xs text-gray-600">mWh</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="text-xs text-gray-600 text-center space-y-1">
+            <div>Dark Period: <span id="darkPeriodEnergy" class="font-medium" style="color:#f9af19;">0.000</span> mWh</div>
+            <div>Min Storage: <span id="minStorage" class="font-medium" style="color:#e09a0f;">0.000</span> mWh</div>
+            <div>Self-discharge: <span id="selfDischarge" class="font-medium" style="color:#d18b0a;">0.0</span>%/mo</div>
+          </div>
+        </div>
+
+        <!-- PV Area (Module Visualization) spans two rows -->
+        <div class="gauge-container p-8 rounded-2xl card-shadow md:row-span-2">
+          <div class="flex items-center mb-4">
+            <div class="w-2 h-6 rounded-full mr-3" style="background:linear-gradient(to bottom,var(--env),var(--env-dark));"></div>
+            <h4 class="text-xl font-bold text-gray-800">Required PV Area (EOL)</h4>
+          </div>
+
+          <div class="text-center">
+            <div id="pvArea" class="text-3xl font-bold" style="color:var(--env);">0.00</div>
+            <div class="text-gray-600 text-sm mb-3">cm²</div>
+            <div class="text-sm text-gray-600 mb-6">
+              Square side (active): <span id="pvSideActive" class="font-medium">0.00</span> cm<br>
+              Square side (footprint): <span id="pvSideFootprint" class="font-medium">0.00</span> cm<br>
+              PM efficiency: <span id="pmEfficiency" class="font-medium">90</span>%
+            </div>
+          </div>
+
+          <!-- Real-Size Preview with inside labels + right/bottom footprint labels -->
+          <div class="text-center">
+            <div class="text-sm font-medium text-gray-700 mb-3">Real-Size Preview</div>
+            <div id="pvPreview" class="relative inline-block mb-4">
+              <div id="pvFrame"></div>
+              <div id="pvSquare" class="pv-square"></div>
+              <!-- Active-square labels (inside) -->
+              <div id="pvLabelTop">0.00 cm</div>
+              <div id="pvLabelLeft">0.00 cm</div>
+              <!-- Footprint labels (right + bottom) -->
+              <div id="pvFrameLabelRight" class="frameLabel">0.00 cm footprint</div>
+              <div id="pvFrameLabelBottom" class="frameLabel">0.00 cm footprint</div>
+            </div>
+            <p class="text-xs text-gray-500">Actual size based on screen DPI</p>
+          </div>
+        </div>
+
+        <!-- LEH Energy Generated (landscape, spans cols 1–2) -->
+        <div class="gauge-container p-6 rounded-2xl card-shadow md:col-span-2">
+          <div class="flex items-center mb-4">
+            <div class="w-2 h-6 rounded-full mr-3" style="background:linear-gradient(to bottom,#06b6d4,#10b981);"></div>
+            <h4 class="text-xl font-bold text-gray-800">LEH Energy Generated (EOL)</h4>
+          </div>
+
+          <!-- Row 1: PV-only -->
+          <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <div class="bg-white/70 rounded-xl p-4 border border-emerald-100">
+              <div class="text-xs text-emerald-700 font-semibold mb-1">PV-only</div>
+              <div class="text-sm text-gray-500 mb-1">Instant Power</div>
+              <div class="text-2xl font-bold text-emerald-700"><span id="lehPower_mW">0.000</span> <span class="text-base font-semibold">mW</span></div>
+            </div>
+            <div class="bg-white/70 rounded-xl p-4 border border-emerald-100">
+              <div class="text-xs text-emerald-700 font-semibold mb-1">PV-only</div>
+              <div class="text-sm text-gray-500 mb-1">Energy per Day</div>
+              <div class="text-2xl font-bold text-emerald-700"><span id="lehEnergyDay_mWh">0.000</span> <span class="text-base font-semibold">mWh</span></div>
+            </div>
+            <div class="bg-white/70 rounded-xl p-4 border border-emerald-100">
+              <div class="text-xs text-emerald-700 font-semibold mb-1">PV-only</div>
+              <div class="text-sm text-gray-500 mb-1">Energy per Month</div>
+              <div class="text-2xl font-bold text-emerald-700"><span id="lehEnergyMonth_mWh">0.000</span> <span class="text-base font-semibold">mWh</span></div>
+            </div>
+            <div class="bg-white/70 rounded-xl p-4 border border-emerald-100">
+              <div class="text-xs text-emerald-700 font-semibold mb-1">PV-only</div>
+              <div class="text-sm text-gray-500 mb-1">Energy over Lifetime</div>
+              <div class="text-2xl font-bold text-emerald-700"><span id="lehEnergyLife_Wh">0.000</span> <span class="text-base font-semibold">Wh</span></div>
+            </div>
+          </div>
+
+          <!-- Row 2: After PM (×eff%) -->
+          <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white/70 rounded-xl p-4 border border-emerald-100">
+              <div class="text-xs text-emerald-700 font-semibold mb-1">After PM (×<span id="lehPmEffLabel1">90</span>%)</div>
+              <div class="text-sm text-gray-500 mb-1">Instant Power</div>
+              <div class="text-2xl font-bold text-emerald-700"><span id="lehPower_mW_pm">0.000</span> <span class="text-base font-semibold">mW</span></div>
+            </div>
+            <div class="bg-white/70 rounded-xl p-4 border border-emerald-100">
+              <div class="text-xs text-emerald-700 font-semibold mb-1">After PM (×<span id="lehPmEffLabel2">90</span>%)</div>
+              <div class="text-sm text-gray-500 mb-1">Energy per Day</div>
+              <div class="text-2xl font-bold text-emerald-700"><span id="lehEnergyDay_mWh_pm">0.000</span> <span class="text-base font-semibold">mWh</span></div>
+            </div>
+            <div class="bg-white/70 rounded-xl p-4 border border-emerald-100">
+              <div class="text-xs text-emerald-700 font-semibold mb-1">After PM (×<span id="lehPmEffLabel3">90</span>%)</div>
+              <div class="text-sm text-gray-500 mb-1">Energy per Month</div>
+              <div class="text-2xl font-bold text-emerald-700"><span id="lehEnergyMonth_mWh_pm">0.000</span> <span class="text-base font-semibold">mWh</span></div>
+            </div>
+            <div class="bg-white/70 rounded-xl p-4 border border-emerald-100">
+              <div class="text-xs text-emerald-700 font-semibold mb-1">After PM (×<span id="lehPmEffLabel4">90</span>%)</div>
+              <div class="text-sm text-gray-500 mb-1">Energy over Lifetime</div>
+              <div class="text-2xl font-bold text-emerald-700"><span id="lehEnergyLife_Wh_pm">0.000</span> <span class="text-base font-semibold">Wh</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex flex-wrap gap-6 mb-2 justify-center">
+        <button class="px-8 py-4 text-white rounded-xl font-semibold shadow-lg" id="resetBtn" style="background:linear-gradient(135deg,#64748b,#475569)">Reset to Default</button>
+        <button class="px-8 py-4 text-white rounded-xl font-semibold shadow-lg" id="constantsBtn" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">Constants</button>
+        <button class="px-8 py-4 text-white rounded-xl font-semibold shadow-lg" id="calculatedBtn" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">Calculated Values</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Constants Modal -->
+  <div id="constantsModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+    <div class="bg-white mx-auto mt-10 p-8 rounded-xl w-11/12 max-w-4xl max-height-4/5 overflow-y-auto">
+      <div class="flex justify-between items-center mb-6 pb-4 border-b-2 border-gray-200">
+        <h3 class="text-2xl font-bold text-gray-800">Constants</h3>
+        <span class="text-3xl font-bold text-gray-400 cursor-pointer hover:text-gray-600" id="constantsClose">×</span>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700" for="darknessPeriod">Darkness Period (months)</label><input type="number" id="darknessPeriod" value="3" step="0.1" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500"></div>
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700" for="secondsInHour">Seconds in Hour</label><input type="number" id="secondsInHour" value="3600" step="1" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500"></div>
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700" for="secondsInDay">Seconds in Day</label><input type="number" id="secondsInDay" value="86400" step="1" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500"></div>
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700" for="daysInMonth">Days in Month</label><input type="number" id="daysInMonth" value="31" step="1" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500"></div>
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700" for="deviceLifetime">Device Lifetime (months)</label><input type="number" id="deviceLifetime" value="36" step="1" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500"></div>
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700" for="powerGenerationPerLux">Power Generation per Lux (mW/cm²/lux)</label><input type="number" id="powerGenerationPerLux" value="0.00003" step="0.00001" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500"></div>
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700" for="cellDegradationPerMonth">Cell Degradation per Month (%)</label><input type="number" id="cellDegradationPerMonth" value="0.185780" step="0.000001" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calculated Values Modal -->
+  <div id="calculatedModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+    <div class="bg-white mx-auto mt-10 p-8 rounded-xl w-11/12 max-w-4xl max-h-4/5 overflow-y-auto">
+      <div class="flex justify-between items-center mb-6 pb-4 border-b-2 border-gray-200">
+        <h3 class="text-2xl font-bold text-gray-800">Calculated Values</h3>
+        <span class="text-3xl font-bold text-gray-400 cursor-pointer hover:text-gray-600" id="calculatedClose">×</span>
+      </div>
+      <div id="calculatedGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+    </div>
+  </div>
+
+  <script>
+    // Default config (Element SDK)
+    const defaultConfig = {
+      app_title:"LEH-enabled Asset Tracker",
+      reset_button_text:"Reset to Default",
+      constants_button_text:"Constants",
+      calculated_button_text:"Calculated Values"
+    };
+    if (window.elementSdk){
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange: (config)=>{
+          document.getElementById('app-title').textContent = config.app_title || defaultConfig.app_title;
+          document.getElementById('resetBtn').textContent = config.reset_button_text || defaultConfig.reset_button_text;
+          document.getElementById('constantsBtn').textContent = config.constants_button_text || defaultConfig.constants_button_text;
+          document.getElementById('calculatedBtn').textContent = config.calculated_button_text || defaultConfig.calculated_button_text;
+        },
+        mapToCapabilities:()=>({ recolorables:[], borderables:[], fontEditable:undefined, fontSizeable:undefined }),
+        mapToEditPanelValues:(config)=> new Map([
+          ["app_title", config.app_title || defaultConfig.app_title],
+          ["reset_button_text", config.reset_button_text || defaultConfig.reset_button_text],
+          ["constants_button_text", config.constants_button_text || defaultConfig.constants_button_text],
+          ["calculated_button_text", config.calculated_button_text || defaultConfig.calculated_button_text]
+        ])
+      });
+    }
+
+    // Editable constants
+    let constants = {
+      darknessPeriod:3,
+      secondsInHour:3600,
+      secondsInDay:86400,
+      daysInMonth:31,
+      deviceLifetime:36,
+      powerGenerationPerLux:0.00003,
+      cellDegradationPerMonth:0.185780
+    };
+
+    // Discharge & PM maps
+    const storageDischarge = {
+      CR:{ annual:1.5 },
+      LiPo:{ monthly:2.5 },
+      LiFePO:{ monthly:1.5 },
+      LTO:{ monthly:3.0 },
+      NiMH:{ monthly:1.5 },
+      Supercap:{ monthly:20.0 },
+      Hybridcap:{ monthly:20.0 }
+    };
+    const pmEfficiencies = { PMIC:90, Discrete:75, Direct:50 };
+
+    // DPI helpers for real-size preview
+    function calculateDPI(){
+      const el=document.createElement('div');
+      el.style.width='1in'; el.style.height='1in'; el.style.position='absolute'; el.style.left='-100%'; el.style.top='-100%';
+      document.body.appendChild(el);
+      const dpi = el.offsetWidth; document.body.removeChild(el);
+      return dpi||96;
+    }
+    const screenDPI = calculateDPI();
+    const pxPerCm = screenDPI/2.54;
+
+    // Gauge update with overflow support and configurable maxima
+    function updateGauge({gaugeId, overflowId, value, maxValue}){
+      const main = document.getElementById(gaugeId);
+      const overflow = document.getElementById(overflowId);
+      if(!main) return;
+
+      const rMain = 70, cMain = 2*Math.PI*rMain;
+      const frac = value / maxValue;
+
+      // Main ring (0..100%)
+      const clamped = Math.max(0, Math.min(1, frac));
+      main.style.strokeDashoffset = (cMain - clamped*cMain);
+
+      // Overflow ring (100..200%)
+      if(overflow){
+        const rOver = 58, cOver = 2*Math.PI*rOver;
+        const over = Math.max(0, frac - 1);
+        overflow.classList.toggle('opacity-0', over<=0);
+        const overClamped = Math.min(1, over);
+        overflow.style.strokeDasharray = cOver;
+        overflow.style.strokeDashoffset = (cOver - overClamped*cOver);
+      }
+    }
+
+    // Paint "filled track" to match section color
+    function colorFill(sliderId, color){
+      const el = document.getElementById(sliderId);
+      if(!el) return;
+      const paint = ()=>{
+        const min = +el.min || 0, max = +el.max || 100, val = +el.value || 0;
+        const p = ((val-min)/(max-min))*100;
+        el.style.background = `linear-gradient(90deg, ${color} 0%, ${color} ${p}%, var(--track) ${p}%, var(--track) 100%)`;
+      };
+      el.addEventListener('input', paint); paint();
+    }
+
+    // Link sliders with number inputs
+    function linkSliderAndInput(sliderId, inputId, color){
+      const slider = document.getElementById(sliderId);
+      const input  = document.getElementById(inputId);
+      const syncFromSlider = ()=>{ input.value=slider.value; colorFill(sliderId,color); calculate(); };
+      const syncFromInput  = ()=>{
+        const v = parseFloat(input.value);
+        const min = parseFloat(input.min), max=parseFloat(input.max);
+        if(!isNaN(v) && v>=min && v<=max) slider.value = v;
+        colorFill(sliderId,color); calculate();
+      };
+      slider.addEventListener('input', syncFromSlider);
+      input.addEventListener('input', syncFromInput);
+      colorFill(sliderId,color);
+    }
+
+    // Radio handling
+    document.addEventListener('click',(e)=>{
+      const opt = e.target.closest('.radio-option');
+      if(!opt) return;
+      const radio = opt.querySelector('input[type="radio"]');
+      const name  = radio.name;
+      document.querySelectorAll(`input[name="${name}"]`).forEach(inp=>{
+        const o = inp.closest('.radio-option');
+        o.classList.remove('selected'); o.style.background='white'; o.style.borderColor='#d1d5db'; o.style.color='#111827';
+      });
+      opt.classList.add('selected'); radio.checked=true;
+      if(opt.classList.contains('system-radio')){
+        opt.style.background='linear-gradient(135deg,var(--sys),var(--sys-dark))'; opt.style.borderColor='var(--sys)'; opt.style.color='#fff';
+      }else{
+        opt.style.background='linear-gradient(135deg,var(--env),var(--env-dark))'; opt.style.borderColor='var(--env)'; opt.style.color='#fff';
+      }
+      calculate();
+    });
+
+    // Wire the sliders
+    linkSliderAndInput('systemVoltage','systemVoltageNum','var(--sys)');
+    linkSliderAndInput('intervalBetweenPulses','intervalBetweenPulsesNum','var(--sys)');
+    linkSliderAndInput('sleepCurrent','sleepCurrentNum','var(--sys)');
+    linkSliderAndInput('pulseDuration','pulseDurationNum','var(--sys)');
+    linkSliderAndInput('pulseCurrent','pulseCurrentNum','var(--sys)');
+    linkSliderAndInput('lightIntensity','lightIntensityNum','var(--env)');
+    linkSliderAndInput('lightDuration','lightDurationNum','var(--env)');
+
+    // PV preview (inside labels + right/bottom footprint labels)
+    function updatePVPreview(sideCm){
+      const pvPreview = document.getElementById('pvPreview');
+      const pvSquare  = document.getElementById('pvSquare');
+      const pvFrame   = document.getElementById('pvFrame');
+      const labelTop  = document.getElementById('pvLabelTop');
+      const labelLeft = document.getElementById('pvLabelLeft');
+      const rightLab  = document.getElementById('pvFrameLabelRight');
+      const bottomLab = document.getElementById('pvFrameLabelBottom');
+      if (!pvPreview || !pvSquare || !pvFrame) return;
+
+      if (sideCm === Infinity || isNaN(sideCm)){
+        pvPreview.style.width='180px'; pvPreview.style.height='196px'; // room for labels
+        pvFrame.style.width='140px'; pvFrame.style.height='140px'; pvFrame.style.left='0'; pvFrame.style.top='0';
+        pvSquare.style.width='100px'; pvSquare.style.height='100px'; pvSquare.style.left='20px'; pvSquare.style.top='20px';
+        labelTop.textContent='∞ cm'; labelLeft.textContent='∞ cm';
+        rightLab.textContent='∞ cm footprint'; rightLab.style.left='146px'; rightLab.style.top='70px';
+        bottomLab.textContent='∞ cm footprint'; bottomLab.style.left='70px'; bottomLab.style.top='146px'; bottomLab.style.transform='translate(-50%,0)';
+        return;
+      }
+
+      const off = 0.65; // cm (6.5 mm)
+      const footSide = sideCm + 2*off;
+
+      const sizePx   = sideCm*pxPerCm;
+      const framePx  = footSide*pxPerCm;
+
+      // Scale if too large
+      const maxFrame = 280;
+      const scale = framePx>maxFrame ? (maxFrame/framePx) : 1;
+
+      const labelPad = 24; // space for right+bottom labels inside preview
+      pvPreview.style.width  = `${framePx*scale + labelPad}px`;
+      pvPreview.style.height = `${framePx*scale + labelPad}px`;
+
+      // Frame box
+      pvFrame.style.width  = `${framePx*scale}px`;
+      pvFrame.style.height = `${framePx*scale}px`;
+      pvFrame.style.left   = `0px`;
+      pvFrame.style.top    = `0px`;
+
+      // PV active square inside frame (offset by 6.5 mm from each side)
+      const offPx = off*pxPerCm*scale;
+      pvSquare.style.width  = `${sizePx*scale}px`;
+      pvSquare.style.height = `${sizePx*scale}px`;
+      pvSquare.style.left   = `${offPx}px`;
+      pvSquare.style.top    = `${offPx}px`;
+
+      // Active labels INSIDE the square
+      const topPadding = 6; // px
+      labelTop.style.left = `${offPx + (sizePx*scale)/2}px`;
+      labelTop.style.top  = `${offPx + topPadding}px`;
+      labelTop.style.transform = 'translate(-50%,0)';
+      labelTop.textContent = `${sideCm.toFixed(2)} cm${scale<1?' (scaled)':''}`;
+
+      const leftPadding = 6; // px
+      labelLeft.style.left = `${offPx + leftPadding}px`;
+      labelLeft.style.top  = `${offPx + (sizePx*scale)/2}px`;
+      labelLeft.style.transform = 'translate(0,-50%)';
+      labelLeft.textContent= `${sideCm.toFixed(2)} cm${scale<1?' (scaled)':''}`;
+
+      // Footprint labels (right side vertical, bottom horizontal)
+      rightLab.textContent  = `${footSide.toFixed(2)} cm footprint`;
+      rightLab.style.left   = `${framePx*scale + 6}px`;
+      rightLab.style.top    = `${(framePx*scale)/2}px`;
+      rightLab.style.transform = 'translate(0,-50%)';
+
+      bottomLab.textContent = `${footSide.toFixed(2)} cm footprint`;
+      bottomLab.style.left  = `${(framePx*scale)/2}px`;
+      bottomLab.style.top   = `${framePx*scale + 6}px`;
+      bottomLab.style.transform = 'translate(-50%,0)';
+    }
+
+    // Modals
+    const constantsModal = document.getElementById('constantsModal');
+    const calculatedModal= document.getElementById('calculatedModal');
+    document.getElementById('constantsBtn').addEventListener('click', ()=>{
+      Object.keys(constants).forEach(k=>{ const i=document.getElementById(k); if(i) i.value=constants[k]; });
+      constantsModal.classList.remove('hidden');
+    });
+    document.getElementById('calculatedBtn').addEventListener('click', ()=>{ updateCalculatedModal(); calculatedModal.classList.remove('hidden'); });
+    document.getElementById('constantsClose').addEventListener('click', ()=>{
+      Object.keys(constants).forEach(k=>{ const i=document.getElementById(k); if(i) constants[k]=parseFloat(i.value) || constants[k]; });
+      constantsModal.classList.add('hidden'); calculate();
+    });
+    document.getElementById('calculatedClose').addEventListener('click', ()=> calculatedModal.classList.add('hidden'));
+    window.addEventListener('click',(e)=>{
+      if(e.target===constantsModal) document.getElementById('constantsClose').click();
+      if(e.target===calculatedModal) calculatedModal.classList.add('hidden');
+    });
+
+    // Reset
+    document.getElementById('resetBtn').addEventListener('click', ()=>{
+      const set=(id,val)=>{ document.getElementById(id).value=val; };
+      set('systemVoltageNum',3.0); set('systemVoltage',3.0);
+      set('intervalBetweenPulsesNum',600); set('intervalBetweenPulses',600);
+      set('sleepCurrentNum',650); set('sleepCurrent',650);
+      set('pulseDurationNum',5); set('pulseDuration',5);
+      set('pulseCurrentNum',11); set('pulseCurrent',11);
+      set('lightIntensityNum',200); set('lightIntensity',200);
+      set('lightDurationNum',60); set('lightDuration',60);
+
+      document.querySelectorAll('.radio-option').forEach(o=>{
+        o.classList.remove('selected'); o.style.background='white'; o.style.borderColor='#d1d5db'; o.style.color='#111827';
+      });
+      document.getElementById('storage-lipo').checked=true;
+      const lipo=document.querySelector('[data-value="LiPo"]');
+      lipo.classList.add('selected'); lipo.style.background='linear-gradient(135deg,var(--env),var(--env-dark))'; lipo.style.borderColor='var(--env)'; lipo.style.color='#fff';
+
+      document.getElementById('pm-pmic').checked=true;
+      const pmic=document.querySelector('[data-value="PMIC"]');
+      pmic.classList.add('selected'); pmic.style.background='linear-gradient(135deg,var(--env),var(--env-dark))'; pmic.style.borderColor='var(--env)'; pmic.style.color='#fff';
+
+      // refresh slider fills quickly
+      ['systemVoltage','intervalBetweenPulses','sleepCurrent','pulseDuration','pulseCurrent','lightIntensity','lightDuration']
+        .forEach(id=> document.getElementById(id).dispatchEvent(new Event('input')));
+      calculate();
+    });
+
+    // Calculated modal table
+    function updateCalculatedModal(){
+      const grid=document.getElementById('calculatedGrid');
+      const v=window.calculatedValues||{};
+      const items=[
+        {label:'Pulses Per Day', value:v.PulsesPerDay, unit:'pulses'},
+        {label:'Power Per Pulse', value:v.PowerPerPulse_mW, unit:'mW'},
+        {label:'Power During Sleep', value:v.PowerDuringSleep_mW, unit:'mW'},
+        {label:'Energy Per Pulse', value:v.EnergyPerPulse_mWh, unit:'mWh'},
+        {label:'Energy Per Sleep Interval', value:v.EnergyPerSleepInterval_mWh, unit:'mWh'},
+        {label:'Pulse Energy Per Day', value:v.PulseEnergyPerDay_mWh, unit:'mWh'},
+        {label:'Sleep Energy Per Day', value:v.SleepEnergyPerDay_mWh, unit:'mWh'},
+        {label:'Total Energy Per Day', value:v.EnergyPerDay_mWh, unit:'mWh'},
+        {label:'Energy During Darkness', value:v.EnergyDarkness_mWh, unit:'mWh'},
+        {label:'Minimum Storage', value:v.MinStorage_mWh, unit:'mWh'},
+        {label:'Monthly Self-Discharge', value:v.MonthlySelfDischargePct, unit:'%'},
+        {label:'Energy Loss', value:v.EnergyLoss_mWh, unit:'mWh'},
+        {label:'Total Storage Required', value:v.TotalStorage_mWh, unit:'mWh'},
+        {label:'LEH Pristine Power', value:v.LEH_pristine_mWcm2, unit:'mW/cm²'},
+        {label:'LEH Degradation', value:v.LEH_degradation_mWcm2, unit:'mW/cm²'},
+        {label:'LEH EOL Power', value:v.LEH_EOL_mWcm2, unit:'mW/cm²'},
+        {label:'Harvest EOL per Day', value:v.Harvest_EOL_mWh_cm2_day, unit:'mWh/cm²/day'},
+        {label:'Required Area', value:v.Area_cm2, unit:'cm²'},
+        {label:'Square Side', value:v.Side_cm, unit:'cm'},
+        {label:'PM Efficiency', value:v.PMEfficiency, unit:'%'}
+      ];
+      grid.innerHTML = items.map(it=>`
+        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-200">
+          <span class="font-medium text-gray-700">${it.label}</span>
+          <span class="font-semibold text-gray-800">${(it.value===Infinity)?'∞':(typeof it.value==='number'? it.value.toFixed(6): it.value)} ${it.unit}</span>
+        </div>`).join('');
+    }
+
+    // utils
+    const byId = (id)=>document.getElementById(id);
+    const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
+
+    // Core calculate()
+    function calculate(){
+      const V  = clamp(parseFloat(document.getElementById('systemVoltageNum').value)||3.0, 1.4, 3.3);
+      const T  = clamp(parseFloat(document.getElementById('intervalBetweenPulsesNum').value)||600, 1, 3600);
+      const In = clamp(parseFloat(document.getElementById('sleepCurrentNum').value)||650, 0, 1000);
+      const tp = clamp(parseFloat(document.getElementById('pulseDurationNum').value)||5, 0.5, 50) / 1000; // s
+      const Ip = clamp(parseFloat(document.getElementById('pulseCurrentNum').value)||11, 0.1, 30);
+      const Lx = clamp(parseFloat(document.getElementById('lightIntensityNum').value)||200, 1, 2000);
+      const Lm = clamp(parseFloat(document.getElementById('lightDurationNum').value)||60, 1, 1440);
+
+      const storageType = document.querySelector('input[name="storageType"]:checked').value;
+      const pmSolution  = document.querySelector('input[name="pmSolution"]:checked').value;
+
+      // Energy model
+      const PulsesPerDay = constants.secondsInDay / T;
+      const PowerPerPulse_mW = V * Ip;
+      const PowerDuringSleep_mW = V * (In/1e6); // nA → mA
+
+      const EnergyPerPulse_mWh = (PowerPerPulse_mW * tp) / constants.secondsInHour;
+      const EnergyPerSleepInterval_mWh = PowerDuringSleep_mW * Math.max(T - tp, 0) / constants.secondsInHour;
+      const PulseEnergyPerDay_mWh = EnergyPerPulse_mWh * PulsesPerDay;
+      const SleepEnergyPerDay_mWh = EnergyPerSleepInterval_mWh * PulsesPerDay;
+      const EnergyPerDay_mWh = PulseEnergyPerDay_mWh + SleepEnergyPerDay_mWh;
+
+      const EnergyDarkness_mWh = EnergyPerDay_mWh * constants.daysInMonth * constants.darknessPeriod;
+      const MinStorage_mWh = EnergyDarkness_mWh + EnergyPerDay_mWh;
+
+      // self-discharge monthly %
+      let MonthlySelfDischargePct;
+      if (storageType==='CR'){
+        MonthlySelfDischargePct = 100*(1 - Math.pow(1 - storageDischarge.CR.annual/100, 1/12));
+      }else{
+        MonthlySelfDischargePct = storageDischarge[storageType].monthly;
+      }
+      const r = MonthlySelfDischargePct/100;
+      const months = constants.darknessPeriod;
+      const remain = Math.pow(1 - r, months);
+      const EnergyLoss_mWh = MinStorage_mWh * (1 - remain);
+      const TotalStorage_mWh = MinStorage_mWh + EnergyLoss_mWh;
+
+      // PV harvest (EOL, PV-only)
+      const LEH_pristine_mWcm2 = Lx * constants.powerGenerationPerLux;
+      const LEH_degradation_mWcm2 = LEH_pristine_mWcm2 * (constants.cellDegradationPerMonth/100) * constants.deviceLifetime;
+      const LEH_EOL_mWcm2 = Math.max(0, LEH_pristine_mWcm2 - LEH_degradation_mWcm2);
+      const Harvest_EOL_mWh_cm2_day = LEH_EOL_mWcm2 * (Lm/60);
+
+      const eff = Math.max(0, Math.min(1, pmEfficiencies[pmSolution]/100));
+      const denom = Harvest_EOL_mWh_cm2_day * eff;
+
+      const Area_cm2 = denom>0 ? (EnergyPerDay_mWh/denom) : Infinity;
+      const Side_cm  = (Area_cm2===Infinity)?Infinity:Math.sqrt(Area_cm2);
+
+      // NEW: LEH Energy Generated (EOL, PV-only numbers)
+      const LEH_Power_mW     = (Area_cm2===Infinity)?Infinity:(LEH_EOL_mWcm2 * Area_cm2);                 // mW
+      const LEH_Eday_mWh     = (Area_cm2===Infinity)?Infinity:(Harvest_EOL_mWh_cm2_day * Area_cm2);       // mWh/day
+      const LEH_Emonth_mWh   = (LEH_Eday_mWh===Infinity)?Infinity:(LEH_Eday_mWh * constants.daysInMonth);  // mWh/month
+      const LEH_Elife_Wh     = (LEH_Emonth_mWh===Infinity)?Infinity:((LEH_Emonth_mWh * constants.deviceLifetime)/1000); // Wh lifetime
+
+      // Post-PM (×eff)
+      const LEH_Power_mW_pm   = (LEH_Power_mW===Infinity)?Infinity:(LEH_Power_mW*eff);
+      const LEH_Eday_mWh_pm   = (LEH_Eday_mWh===Infinity)?Infinity:(LEH_Eday_mWh*eff);
+      const LEH_Emonth_mWh_pm = (LEH_Emonth_mWh===Infinity)?Infinity:(LEH_Emonth_mWh*eff);
+      const LEH_Elife_Wh_pm   = (LEH_Elife_Wh===Infinity)?Infinity:(LEH_Elife_Wh*eff);
+
+      // Update text
+      byId('dailyEnergy').textContent = EnergyPerDay_mWh.toFixed(3);
+      byId('pulseEnergy').textContent = PulseEnergyPerDay_mWh.toFixed(3);
+      byId('sleepEnergy').textContent = SleepEnergyPerDay_mWh.toFixed(3);
+      byId('totalStorage').textContent = TotalStorage_mWh.toFixed(3);
+      byId('darkPeriodEnergy').textContent = EnergyDarkness_mWh.toFixed(3);
+      byId('minStorage').textContent = MinStorage_mWh.toFixed(3);
+      byId('selfDischarge').textContent = MonthlySelfDischargePct.toFixed(1);
+
+      byId('pvArea').textContent = Area_cm2===Infinity ? '∞' : Area_cm2.toFixed(2);
+      byId('pvSideActive').textContent = Side_cm===Infinity ? '∞' : Side_cm.toFixed(2);
+      const footSide = (Side_cm===Infinity)?Infinity:(Side_cm + 2*0.65);
+      byId('pvSideFootprint').textContent = (footSide===Infinity)?'∞' : footSide.toFixed(2);
+      byId('pmEfficiency').textContent = pmEfficiencies[pmSolution];
+
+      // Update LEH section values (PV-only)
+      byId('lehPower_mW').textContent       = (LEH_Power_mW===Infinity)?'∞':LEH_Power_mW.toFixed(3);
+      byId('lehEnergyDay_mWh').textContent  = (LEH_Eday_mWh===Infinity)?'∞':LEH_Eday_mWh.toFixed(3);
+      byId('lehEnergyMonth_mWh').textContent= (LEH_Emonth_mWh===Infinity)?'∞':LEH_Emonth_mWh.toFixed(3);
+      byId('lehEnergyLife_Wh').textContent  = (LEH_Elife_Wh===Infinity)?'∞':LEH_Elife_Wh.toFixed(3);
+
+      // Update LEH section values (After PM)
+      byId('lehPower_mW_pm').textContent       = (LEH_Power_mW_pm===Infinity)?'∞':LEH_Power_mW_pm.toFixed(3);
+      byId('lehEnergyDay_mWh_pm').textContent  = (LEH_Eday_mWh_pm===Infinity)?'∞':LEH_Eday_mWh_pm.toFixed(3);
+      byId('lehEnergyMonth_mWh_pm').textContent= (LEH_Emonth_mWh_pm===Infinity)?'∞':LEH_Emonth_mWh_pm.toFixed(3);
+      byId('lehEnergyLife_Wh_pm').textContent  = (LEH_Elife_Wh_pm===Infinity)?'∞':LEH_Elife_Wh_pm.toFixed(3);
+
+      // Update small eff labels
+      ['lehPmEffLabel1','lehPmEffLabel2','lehPmEffLabel3','lehPmEffLabel4'].forEach(id=>{
+        byId(id).textContent = pmEfficiencies[pmSolution];
+      });
+
+      // Gauges with requested maxima + overflow
+      updateGauge({ gaugeId:'dailyEnergyGauge',   overflowId:'dailyOverflow',   value:EnergyPerDay_mWh, maxValue:6 });   // 6 mWh
+      updateGauge({ gaugeId:'storageGauge',       overflowId:'storageOverflow', value:TotalStorage_mWh, maxValue:40 });  // 40 mWh
+
+      // PV preview
+      updatePVPreview(Side_cm);
+
+      // expose for modal
+      window.calculatedValues = {
+        PulsesPerDay, PowerPerPulse_mW, PowerDuringSleep_mW,
+        EnergyPerPulse_mWh, EnergyPerSleepInterval_mWh,
+        PulseEnergyPerDay_mWh, SleepEnergyPerDay_mWh, EnergyPerDay_mWh,
+        EnergyDarkness_mWh, MinStorage_mWh, MonthlySelfDischargePct,
+        EnergyLoss_mWh, TotalStorage_mWh,
+        LEH_pristine_mWcm2, LEH_degradation_mWcm2, LEH_EOL_mWcm2,
+        Harvest_EOL_mWh_cm2_day,
+        Area_cm2, Side_cm, PMEfficiency: pmEfficiencies[pmSolution]
+      };
+    }
+
+    // Initial calculate
+    calculate();
+  </script>
+
+  <!-- Cloudflare challenge (kept) -->
+  <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'99928215c2818745',t:'MTc2MjI0MjQ5Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+</body>
+</html>
