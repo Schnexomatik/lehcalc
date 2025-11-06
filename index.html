@@ -9,7 +9,7 @@
   body{box-sizing:border-box;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#e7e7df}
   .glass{background:rgba(255,255,255,.95);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.2)}
   .card{box-shadow:0 20px 25px -5px rgba(0,0,0,.1),0 10px 10px -5px rgba(0,0,0,.04)}
-  :root{--sys:#ff5000;--sys-dark:#e04500;--env:#02a880;--env-dark:#028a6b;--track:#d1d5db}
+  :root{--sys:#ff5000;--sys-dark:#e04500;--env:#02a880;--env-dark:#028a6b;--track:#d1d5db;--pmic:#06b6d4;--storage:#f9af19}
   .slider{-webkit-appearance:none;appearance:none;height:8px;border-radius:4px;background:var(--track);outline:0}
   .system-slider::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;border:0;background:linear-gradient(135deg,var(--sys),var(--sys-dark));box-shadow:0 4px 12px rgba(255,80,0,.35)}
   .system-slider::-moz-range-thumb{width:22px;height:22px;border-radius:50%;border:0;background:linear-gradient(135deg,var(--sys),var(--sys-dark));box-shadow:0 4px 12px rgba(255,80,0,.35)}
@@ -18,9 +18,6 @@
   .input-field{transition:all .2s ease;border-radius:8px}
   .system-input{border-color:var(--sys)!important}.system-input:focus{box-shadow:0 4px 12px rgba(255,80,0,.25)!important;border-color:var(--sys)!important}
   .env-input{border-color:var(--env)!important}.env-input:focus{box-shadow:0 4px 12px rgba(2,168,128,.25)!important;border-color:var(--env)!important}
-  .radio-option{transition:all .2s ease;border-radius:8px}
-  .radio-option:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.08)}
-  .env-radio.selected{background:linear-gradient(135deg,var(--env),var(--env-dark))!important;border-color:var(--env)!important;color:#fff!important}
   .gauge{background:#e7e7df;border:1px solid rgba(0,0,0,.06)}
   /* PV preview */
   #pvPreview{position:relative;display:inline-block;min-width:140px;min-height:140px}
@@ -28,7 +25,8 @@
   #pvFrame{position:absolute;border:2px dashed #34d399;border-radius:6px;pointer-events:none}
   #pvLabelTop{position:absolute;font-size:12px;color:#065f46;background:rgba(255,255,255,.9);padding:2px 4px;border-radius:6px;border:1px solid #a7f3d0}
   #pvLabelLeft{position:absolute;font-size:12px;color:#065f46;background:rgba(255,255,255,.9);padding:2px 4px;border-radius:6px;border:1px solid #a7f3d0;writing-mode:vertical-rl;text-orientation:mixed}
-  .frameLabel{position:absolute;font-size:12px;color:#065f46;background:rgba(255,255,255,.9);padding:2px 6px;border-radius:6px;border:1px solid #a7f3d0}
+  .frameLabel{position:absolute;font-size:12px;color:#065f46;padding:2px 6px;border-radius:6px}
+  #pvFrameLabelRight,#pvFrameLabelBottom{background:transparent!important;border:none!important}
   #pvFrameLabelRight{writing-mode:vertical-rl;text-orientation:mixed}
   /* Sidebar */
   .sidebar{background:linear-gradient(180deg,#0f172a,#0b2457 60%,#0f172a);color:#fff}
@@ -55,6 +53,7 @@
       <div class="flex flex-col gap-2">
         <button id="resetBtn" class="sidebtn sidebtn-secondary">Reset</button>
         <button id="constantsBtn" class="sidebtn sidebtn-ghost">Constants</button>
+        <button id="pricesBtn" class="sidebtn sidebtn-ghost">Prices</button>
         <button id="calculatedBtn" class="sidebtn sidebtn-primary">Calculated</button>
       </div>
     </aside>
@@ -74,8 +73,8 @@
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1" for="systemVoltage">System Voltage (V)</label>
                 <div class="flex items-center gap-3">
-                  <input type="range" id="systemVoltage" class="slider system-slider flex-1" min="1.4" max="3.3" step="0.1" value="3.0">
-                  <input type="number" id="systemVoltageNum" class="system-input input-field w-24 px-3 py-2 border-2 rounded-lg text-sm text-center bg-white focus:outline-none" min="1.4" max="3.3" step="0.1" value="3.0">
+                  <input type="range" id="systemVoltage" class="slider system-slider flex-1" min="1.4" max="3.3" step="0.1" value="2.0">
+                  <input type="number" id="systemVoltageNum" class="system-input input-field w-24 px-3 py-2 border-2 rounded-lg text-sm text-center bg-white focus:outline-none" min="1.4" max="3.3" step="0.1" value="2.0">
                 </div>
               </div>
               <div>
@@ -138,52 +137,35 @@
                 </div>
               </div>
 
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Energy Storage Type</label>
-                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  <label class="env-radio radio-option flex items-center px-2 py-1 bg-white border-2 border-gray-300 rounded cursor-pointer">
-                    <input type="radio" name="storageType" value="CR" class="mr-1"> <span class="text-xs">CR (1.5%/yr)</span>
-                  </label>
-                  <label class="env-radio radio-option selected flex items-center px-2 py-1 rounded cursor-pointer text-white" style="background:linear-gradient(135deg,var(--env),var(--env-dark));border-color:var(--env)">
-                    <input type="radio" name="storageType" value="LiPo" checked class="mr-1"> <span class="text-xs">LiPo (2.5%/mo)</span>
-                  </label>
-                  <label class="env-radio radio-option flex items-center px-2 py-1 bg-white border-2 border-gray-300 rounded cursor-pointer">
-                    <input type="radio" name="storageType" value="LiFePO" class="mr-1"> <span class="text-xs">LiFePO (1.5%/mo)</span>
-                  </label>
-                  <label class="env-radio radio-option flex items-center px-2 py-1 bg-white border-2 border-gray-300 rounded cursor-pointer">
-                    <input type="radio" name="storageType" value="LTO" class="mr-1"> <span class="text-xs">LTO (3%/mo)</span>
-                  </label>
-                  <label class="env-radio radio-option flex items-center px-2 py-1 bg-white border-2 border-gray-300 rounded cursor-pointer">
-                    <input type="radio" name="storageType" value="NiMH" class="mr-1"> <span class="text-xs">NiMH (1.5%/mo)</span>
-                  </label>
-                  <label class="env-radio radio-option flex items-center px-2 py-1 bg-white border-2 border-gray-300 rounded cursor-pointer">
-                    <input type="radio" name="storageType" value="Supercap" class="mr-1"> <span class="text-xs">Supercap (20%/mo)</span>
-                  </label>
-                  <label class="env-radio radio-option flex items-center px-2 py-1 bg-white border-2 border-gray-300 rounded cursor-pointer">
-                    <input type="radio" name="storageType" value="Hybridcap" class="mr-1"> <span class="text-xs">Hybridcap (20%/mo)</span>
-                  </label>
+              <!-- NEW: compact dropdowns -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label for="storageSelect" class="block text-sm font-medium text-gray-700 mb-1">Energy Storage Type</label>
+                  <select id="storageSelect" class="env-input input-field w-full px-3 py-2 border-2 rounded-lg bg-white focus:outline-none">
+                    <option value="CR">CR (1.5%/yr)</option>
+                    <option value="LiPo" selected>LiPo (2.5%/mo)</option>
+                    <option value="LiFePO">LiFePO (1.5%/mo)</option>
+                    <option value="LTO">LTO (3%/mo)</option>
+                    <option value="NiMH">NiMH (1.5%/mo)</option>
+                    <option value="Supercap">Supercap (20%/mo)</option>
+                    <option value="Hybridcap">Hybridcap (20%/mo)</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="pmSelect" class="block text-sm font-medium text-gray-700 mb-1">PM Solution</label>
+                  <select id="pmSelect" class="env-input input-field w-full px-3 py-2 border-2 rounded-lg bg-white focus:outline-none">
+                    <option value="PMIC" selected>Full PMIC (90%)</option>
+                    <option value="Discrete">Discrete (75%)</option>
+                    <option value="Direct">Direct-to-MCU (50%)</option>
+                  </select>
                 </div>
               </div>
 
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">PM Solution</label>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  <label class="env-radio radio-option selected flex items-center px-2 py-1 rounded cursor-pointer text-white" style="background:linear-gradient(135deg,var(--env),var(--env-dark));border-color:var(--env)">
-                    <input type="radio" name="pmSolution" value="PMIC" checked class="mr-1"> <span class="text-xs">Full PMIC (90%)</span>
-                  </label>
-                  <label class="env-radio radio-option flex items-center px-2 py-1 bg-white border-2 border-gray-300 rounded cursor-pointer">
-                    <input type="radio" name="pmSolution" value="Discrete" class="mr-1"> <span class="text-xs">Discrete (75%)</span>
-                  </label>
-                  <label class="env-radio radio-option flex items-center px-2 py-1 bg-white border-2 border-gray-300 rounded cursor-pointer">
-                    <input type="radio" name="pmSolution" value="Direct" class="mr-1"> <span class="text-xs">Direct-to-MCU (50%)</span>
-                  </label>
-                </div>
-              </div>
             </div>
           </div>
         </div>
 
-        <!-- Results grid: 3 columns: [Daily] [Storage] [PV]; LEH spans columns 1-2 -->
+        <!-- Results grid: 3 columns: [Daily] [Storage] [PV]; LEH spans 1-2; COST spans 1-2 below -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
           <!-- Daily (short) -->
           <div class="gauge p-4 rounded-2xl card">
@@ -265,11 +247,10 @@
                 <!-- inside active labels -->
                 <div id="pvLabelTop">0.00 cm</div>
                 <div id="pvLabelLeft">0.00 cm</div>
-                <!-- footprint labels right & bottom -->
+                <!-- footprint labels right & bottom (no background fill) -->
                 <div id="pvFrameLabelRight" class="frameLabel">0.00 cm footprint</div>
                 <div id="pvFrameLabelBottom" class="frameLabel">0.00 cm footprint</div>
               </div>
-              <p class="text-[11px] text-gray-500">Actual size based on screen DPI</p>
             </div>
           </div>
 
@@ -324,6 +305,57 @@
               </div>
             </div>
           </div>
+
+          <!-- COST (spans cols 1-2, row under LEH) -->
+          <div class="gauge p-4 rounded-2xl card md:col-span-2">
+            <div class="flex items-center mb-2">
+              <div class="w-2 h-6 rounded-full mr-3" style="background:linear-gradient(to bottom,#0ea5e9,#10b981)"></div>
+              <h4 class="text-xl font-bold text-gray-800">Cost</h4>
+            </div>
+            <div class="grid md:grid-cols-2 gap-4">
+              <!-- Pie gauge -->
+              <div class="flex items-center justify-center">
+                <div class="relative w-48 h-48">
+                  <svg class="-rotate-90 w-48 h-48" viewBox="0 0 200 200" aria-hidden="true">
+                    <circle cx="100" cy="100" r="80" stroke="#e5e7eb" stroke-width="24" fill="none"/>
+                    <!-- segments: module, pmic, storage -->
+                    <circle id="costSegModule" cx="100" cy="100" r="80" stroke="var(--env)" stroke-width="24" fill="none" stroke-linecap="butt" stroke-dasharray="0 502.654" stroke-dashoffset="0"/>
+                    <circle id="costSegPMIC"   cx="100" cy="100" r="80" stroke="var(--pmic)" stroke-width="24" fill="none" stroke-linecap="butt" stroke-dasharray="0 502.654" stroke-dashoffset="0"/>
+                    <circle id="costSegStore"  cx="100" cy="100" r="80" stroke="var(--storage)" stroke-width="24" fill="none" stroke-linecap="butt" stroke-dasharray="0 502.654" stroke-dashoffset="0"/>
+                  </svg>
+                  <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                    <div class="text-xs text-gray-500">Total</div>
+                    <div id="costTotal" class="text-2xl font-bold text-gray-800">$0.00</div>
+                  </div>
+                </div>
+              </div>
+              <!-- Legend -->
+              <div class="grid grid-cols-1 gap-2 content-center">
+                <div class="flex items-center justify-between bg-white/70 rounded-xl p-3 border">
+                  <div class="flex items-center gap-2">
+                    <span class="inline-block w-3 h-3 rounded-sm" style="background:var(--env)"></span>
+                    <span class="text-sm font-medium text-gray-700">Module (active area)</span>
+                  </div>
+                  <div class="text-lg font-bold text-gray-800" id="costModule">$0.00</div>
+                </div>
+                <div class="flex items-center justify-between bg-white/70 rounded-xl p-3 border">
+                  <div class="flex items-center gap-2">
+                    <span class="inline-block w-3 h-3 rounded-sm" style="background:var(--pmic)"></span>
+                    <span class="text-sm font-medium text-gray-700">PMIC</span>
+                  </div>
+                  <div class="text-lg font-bold text-gray-800" id="costPMIC">$0.00</div>
+                </div>
+                <div class="flex items-center justify-between bg-white/70 rounded-xl p-3 border">
+                  <div class="flex items-center gap-2">
+                    <span class="inline-block w-3 h-3 rounded-sm" style="background:var(--storage)"></span>
+                    <span class="text-sm font-medium text-gray-700">Energy Storage</span>
+                  </div>
+                  <div class="text-lg font-bold text-gray-800" id="costStorage">$0.00</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
     </main>
@@ -343,6 +375,37 @@
         <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">Days in Month</label><input id="daysInMonth" type="number" value="31" step="1" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500"></div>
         <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">Power Generation per Lux (mW/cm²/lux)</label><input id="powerGenerationPerLux" type="number" value="0.00003" step="0.00001" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500"></div>
         <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">Cell Degradation per Month (%)</label><input id="cellDegradationPerMonth" type="number" value="0.185780" step="0.000001" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prices Modal -->
+  <div id="pricesModal" class="modal items-center justify-center p-4">
+    <div class="bg-white w-full max-w-4xl max-h-[85vh] overflow-y-auto rounded-xl p-6">
+      <div class="flex justify-between items-center mb-4 pb-3 border-b">
+        <h3 class="text-xl font-bold text-gray-800">Prices (Editable)</h3>
+        <button id="pricesClose" class="text-3xl font-bold text-gray-400 hover:text-gray-600 leading-none">&times;</button>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">Module price (USD per cm² active)</label><input id="priceModulePerCm2" type="number" step="0.0001" value="0.004" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"></div>
+
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">PMIC Full (USD each)</label><input id="pricePMICFull" type="number" step="0.01" value="1.0" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"></div>
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">PMIC Discrete (USD each)</label><input id="pricePMICDiscrete" type="number" step="0.01" value="0.4" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"></div>
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">PMIC Direct (USD each)</label><input id="pricePMICDirect" type="number" step="0.01" value="0" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"></div>
+
+        <!-- Storage (USD per Wh) -->
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">CR (USD/Wh)</label><input id="priceCR" type="number" step="0.01" value="0.45" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"></div>
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">LiPo (USD/Wh)</label><input id="priceLiPo" type="number" step="0.01" value="1.30" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"></div>
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">LiFePO (USD/Wh)</label><input id="priceLiFePO" type="number" step="0.01" value="0.90" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"></div>
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">LTO (USD/Wh)</label><input id="priceLTO" type="number" step="0.01" value="0.32" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"></div>
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">NiMH (USD/Wh)</label><input id="priceNiMH" type="number" step="0.01" value="1.40" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"></div>
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">Supercap (USD/Wh)</label><input id="priceSupercap" type="number" step="0.1" value="19.0" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"></div>
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">Hybridcap (USD/Wh)</label><input id="priceHybridcap" type="number" step="0.1" value="15.0" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"></div>
+      </div>
+
+      <div class="flex gap-3 mt-6">
+        <button id="pricesReset" class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300">Reset</button>
+        <button id="pricesApply" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white">Apply & Recalculate</button>
       </div>
     </div>
   </div>
@@ -372,6 +435,16 @@ window.addEventListener('DOMContentLoaded', () => {
     powerGenerationPerLux:0.00003,
     cellDegradationPerMonth:0.185780
   };
+
+  // Pricing (editable in Prices modal)
+  const defaultPrices = {
+    modulePerCm2: 0.004, // USD/cm²
+    pmic: { PMIC:1.0, Discrete:0.4, Direct:0 },
+    storagePerWh: {
+      CR:0.45, LiPo:1.30, LiFePO:0.90, LTO:0.32, NiMH:1.40, Supercap:19.0, Hybridcap:15.0
+    }
+  };
+  let prices = JSON.parse(JSON.stringify(defaultPrices));
 
   const storageDischarge = {
     CR:{ annual:1.5 }, LiPo:{ monthly:2.5 }, LiFePO:{ monthly:1.5 },
@@ -412,21 +485,9 @@ window.addEventListener('DOMContentLoaded', () => {
   link('lightDuration','lightDurationNum','var(--env)');
   link('deviceLifetime','deviceLifetimeNum','var(--env)');
 
-  // Radios
-  document.body.addEventListener('click',(e)=>{
-    const opt=e.target.closest('.radio-option'); if(!opt) return;
-    const input=opt.querySelector('input[type="radio"]'); if(!input) return;
-    const name=input.name;
-    document.querySelectorAll(`input[name="${name}"]`).forEach(inp=>{
-      const o=inp.closest('.radio-option'); if(!o) return;
-      o.classList.remove('selected'); o.style.background='white'; o.style.borderColor='#d1d5db'; o.style.color='#111827';
-    });
-    opt.classList.add('selected');
-    opt.style.background='linear-gradient(135deg,var(--env),var(--env-dark))';
-    opt.style.borderColor='var(--env)'; opt.style.color='#fff';
-    input.checked=true;
-    calculate();
-  });
+  // Dropdowns
+  byId('storageSelect').addEventListener('change', calculate);
+  byId('pmSelect').addEventListener('change', calculate);
 
   // Gauges with overflow rings
   function updateGauge({gaugeId, overflowId, value, maxValue}){
@@ -446,18 +507,44 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // COST pie (3 segments)
+  function updateCostPie(cModule, cPMIC, cStore){
+    const total = Math.max(0, (cModule||0)+(cPMIC||0)+(cStore||0));
+    const C = 2*Math.PI*80; // r=80, matches SVG
+    const seg = (v)=> (total>0 ? (v/total)*C : 0);
+
+    const s1 = seg(cModule);
+    const s2 = seg(cPMIC);
+    const s3 = seg(cStore);
+
+    const costSegModule = byId('costSegModule');
+    const costSegPMIC   = byId('costSegPMIC');
+    const costSegStore  = byId('costSegStore');
+
+    // Module starts at offset 0
+    costSegModule.style.strokeDasharray = `${s1} ${C - s1}`;
+    costSegModule.style.strokeDashoffset = `0`;
+
+    // PMIC starts after module
+    costSegPMIC.style.strokeDasharray = `${s2} ${C - s2}`;
+    costSegPMIC.style.strokeDashoffset = `${-s1}`;
+
+    // Storage starts after module+pmic
+    costSegStore.style.strokeDasharray = `${s3} ${C - s3}`;
+    costSegStore.style.strokeDashoffset = `${-(s1+s2)}`;
+  }
+
   // DPI & PV preview
   function dpi(){ const el=document.createElement('div'); el.style.width='1in'; el.style.height='1in'; el.style.position='absolute'; el.style.left='-100%'; el.style.top='-100%'; document.body.appendChild(el); const d=el.offsetWidth; el.remove(); return d||96; }
   const pxPerCm = dpi()/2.54;
 
   function updatePVPreview(sideCm){
-    const pvPreview=byId('pvPreview'), pvSquare=byId('pvSquare'), pvFrame=byId('pvFrame');
+    const pvSquare=byId('pvSquare'), pvFrame=byId('pvFrame');
     const labelTop=byId('pvLabelTop'), labelLeft=byId('pvLabelLeft');
     const rightLab=byId('pvFrameLabelRight'), bottomLab=byId('pvFrameLabelBottom');
-    if(!pvPreview||!pvSquare||!pvFrame) return;
+    if(!pvSquare||!pvFrame) return;
 
     if(!isFinite(sideCm)){
-      pvPreview.style.width='180px'; pvPreview.style.height='196px';
       pvFrame.style.width='140px'; pvFrame.style.height='140px'; pvFrame.style.left='0'; pvFrame.style.top='0';
       pvSquare.style.width='100px'; pvSquare.style.height='100px'; pvSquare.style.left='20px'; pvSquare.style.top='20px';
       labelTop.textContent='∞ cm'; labelLeft.textContent='∞ cm';
@@ -469,9 +556,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const footSide=sideCm + 2*off;
     const sizePx=sideCm*pxPerCm, framePx=footSide*pxPerCm;
     const maxFrame=280, scale=framePx>maxFrame ? maxFrame/framePx : 1;
-
-    pvPreview.style.width=`${framePx*scale + 24}px`;
-    pvPreview.style.height=`${framePx*scale + 24}px`;
 
     pvFrame.style.width=`${framePx*scale}px`;
     pvFrame.style.height=`${framePx*scale}px`;
@@ -493,7 +577,7 @@ window.addEventListener('DOMContentLoaded', () => {
     labelLeft.style.transform='translate(0,-50%)';
     labelLeft.textContent = `${sideCm.toFixed(2)} cm${scale<1?' (scaled)':''}`;
 
-    // footprint labels: right & bottom
+    // footprint labels: right & bottom (no background fill)
     rightLab.textContent = `${footSide.toFixed(2)} cm footprint`;
     rightLab.style.left = `${framePx*scale + 6}px`;
     rightLab.style.top = `${(framePx*scale)/2}px`;
@@ -508,7 +592,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // Calculation
   function calculate(){
     try{
-      const V  = clamp(+byId('systemVoltageNum').value||3.0, 1.4, 3.3);
+      const V  = clamp(+byId('systemVoltageNum').value||2.0, 1.4, 3.3);
       const T  = clamp(+byId('intervalBetweenPulsesNum').value||600, 1, 3600);
       const In = clamp(+byId('sleepCurrentNum').value||650, 0, 1000);
       const tp = clamp(+byId('pulseDurationNum').value||5, 0.5, 50)/1000;
@@ -517,10 +601,8 @@ window.addEventListener('DOMContentLoaded', () => {
       const Lm = clamp(+byId('lightDurationNum').value||60, 1, 1440);
       const devLifeMonths = clamp(+byId('deviceLifetimeNum').value||36, 1, 120);
 
-      const stEl = document.querySelector('input[name="storageType"]:checked');
-      const pmEl = document.querySelector('input[name="pmSolution"]:checked');
-      const storageType = stEl ? stEl.value : 'LiPo';
-      const pmSolution  = pmEl ? pmEl.value : 'PMIC';
+      const storageType = byId('storageSelect').value;
+      const pmSolution  = byId('pmSelect').value;
 
       const PulsesPerDay = constants.secondsInDay / T;
       const PowerPerPulse_mW = V * Ip;
@@ -596,11 +678,24 @@ window.addEventListener('DOMContentLoaded', () => {
       byId('lehEnergyMonth_mWh_pm').textContent = isFinite(LEH_Emonth_mWh_pm)? LEH_Emonth_mWh_pm.toFixed(3):'∞';
       byId('lehEnergyLife_Wh_pm').textContent = isFinite(LEH_Elife_Wh_pm)? LEH_Elife_Wh_pm.toFixed(3):'∞';
 
-      // Gauges: max 6 and 40; overflow ring shows extra
+      // Gauges: caps 6 and 40; overflow ring shows extra
       updateGauge({gaugeId:'dailyEnergyGauge', overflowId:'dailyOverflow', value:EnergyPerDay_mWh, maxValue:6});
       updateGauge({gaugeId:'storageGauge', overflowId:'storageOverflow', value:TotalStorage_mWh, maxValue:40});
 
       updatePVPreview(Side_cm);
+
+      // ---- COSTS ----
+      const costModule = isFinite(Area_cm2) ? (Area_cm2 * prices.modulePerCm2) : 0;
+      const costPMIC   = prices.pmic[pmSolution] ?? 0;
+      const perWh      = prices.storagePerWh[storageType] ?? 0;
+      const costStore  = (TotalStorage_mWh/1000) * perWh; // mWh -> Wh
+      const costTotal  = (costModule + costPMIC + costStore);
+
+      byId('costModule').textContent = `$${costModule.toFixed(2)}`;
+      byId('costPMIC').textContent   = `$${costPMIC.toFixed(2)}`;
+      byId('costStorage').textContent= `$${costStore.toFixed(2)}`;
+      byId('costTotal').textContent  = `$${costTotal.toFixed(2)}`;
+      updateCostPie(costModule, costPMIC, costStore);
 
       // stash for modal
       window.calculatedValues = {
@@ -609,7 +704,8 @@ window.addEventListener('DOMContentLoaded', () => {
         PulseEnergyPerDay_mWh, SleepEnergyPerDay_mWh, EnergyPerDay_mWh,
         EnergyDarkness_mWh, MinStorage_mWh, MonthlySelfDischargePct, EnergyLoss_mWh, TotalStorage_mWh,
         LEH_pristine_mWcm2, LEH_degradation_mWcm2, LEH_EOL_mWcm2, Harvest_EOL_mWh_cm2_day,
-        Area_cm2, Side_cm, PMEfficiency: Math.round(eff*100)
+        Area_cm2, Side_cm, PMEfficiency: Math.round(eff*100),
+        costModule, costPMIC, costStore, costTotal
       };
     }catch(e){ console.error(e); }
   }
@@ -636,7 +732,11 @@ window.addEventListener('DOMContentLoaded', () => {
       ['Harvest EOL / Day', v.Harvest_EOL_mWh_cm2_day,'mWh/cm²/day'],
       ['Required Area', v.Area_cm2,'cm²'],
       ['Square Side (active)', v.Side_cm,'cm'],
-      ['PM Efficiency', v.PMEfficiency,'%']
+      ['PM Efficiency', v.PMEfficiency,'%'],
+      ['Cost: Module', v.costModule,'USD'],
+      ['Cost: PMIC', v.costPMIC,'USD'],
+      ['Cost: Storage', v.costStore,'USD'],
+      ['Cost: Total', v.costTotal,'USD']
     ];
     g.innerHTML = items.map(([label,val,unit])=>`
       <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-200">
@@ -648,9 +748,9 @@ window.addEventListener('DOMContentLoaded', () => {
   // Buttons / Modals
   const constantsModal = byId('constantsModal');
   const calculatedModal = byId('calculatedModal');
+  const pricesModal = byId('pricesModal');
 
   byId('constantsBtn').addEventListener('click', ()=>{
-    // populate fields
     Object.keys(constants).forEach(k=>{ const el=byId(k); if(el) el.value = constants[k]; });
     constantsModal.classList.add('show');
   });
@@ -658,23 +758,71 @@ window.addEventListener('DOMContentLoaded', () => {
     updateCalculatedModal();
     calculatedModal.classList.add('show');
   });
+  byId('pricesBtn').addEventListener('click', ()=>{
+    // populate prices
+    byId('priceModulePerCm2').value = prices.modulePerCm2;
+    byId('pricePMICFull').value = prices.pmic.PMIC;
+    byId('pricePMICDiscrete').value = prices.pmic.Discrete;
+    byId('pricePMICDirect').value = prices.pmic.Direct;
+    byId('priceCR').value = prices.storagePerWh.CR;
+    byId('priceLiPo').value = prices.storagePerWh.LiPo;
+    byId('priceLiFePO').value = prices.storagePerWh.LiFePO;
+    byId('priceLTO').value = prices.storagePerWh.LTO;
+    byId('priceNiMH').value = prices.storagePerWh.NiMH;
+    byId('priceSupercap').value = prices.storagePerWh.Supercap;
+    byId('priceHybridcap').value = prices.storagePerWh.Hybridcap;
+    pricesModal.classList.add('show');
+  });
+
   byId('constantsClose').addEventListener('click', ()=>{
-    // save & close
     Object.keys(constants).forEach(k=>{ const el=byId(k); if(el){ const num=parseFloat(el.value); if(!isNaN(num)) constants[k]=num; } });
     constantsModal.classList.remove('show');
     calculate();
   });
   byId('calculatedClose').addEventListener('click', ()=>calculatedModal.classList.remove('show'));
 
+  byId('pricesClose').addEventListener('click', ()=>pricesModal.classList.remove('show'));
+  byId('pricesReset').addEventListener('click', ()=>{
+    prices = JSON.parse(JSON.stringify(defaultPrices));
+    // reflect immediately in inputs
+    byId('priceModulePerCm2').value = prices.modulePerCm2;
+    byId('pricePMICFull').value = prices.pmic.PMIC;
+    byId('pricePMICDiscrete').value = prices.pmic.Discrete;
+    byId('pricePMICDirect').value = prices.pmic.Direct;
+    byId('priceCR').value = prices.storagePerWh.CR;
+    byId('priceLiPo').value = prices.storagePerWh.LiPo;
+    byId('priceLiFePO').value = prices.storagePerWh.LiFePO;
+    byId('priceLTO').value = prices.storagePerWh.LTO;
+    byId('priceNiMH').value = prices.storagePerWh.NiMH;
+    byId('priceSupercap').value = prices.storagePerWh.Supercap;
+    byId('priceHybridcap').value = prices.storagePerWh.Hybridcap;
+  });
+  byId('pricesApply').addEventListener('click', ()=>{
+    prices.modulePerCm2 = parseFloat(byId('priceModulePerCm2').value)||prices.modulePerCm2;
+    prices.pmic.PMIC = parseFloat(byId('pricePMICFull').value)||prices.pmic.PMIC;
+    prices.pmic.Discrete = parseFloat(byId('pricePMICDiscrete').value)||prices.pmic.Discrete;
+    prices.pmic.Direct = parseFloat(byId('pricePMICDirect').value)||prices.pmic.Direct;
+    prices.storagePerWh.CR = parseFloat(byId('priceCR').value)||prices.storagePerWh.CR;
+    prices.storagePerWh.LiPo = parseFloat(byId('priceLiPo').value)||prices.storagePerWh.LiPo;
+    prices.storagePerWh.LiFePO = parseFloat(byId('priceLiFePO').value)||prices.storagePerWh.LiFePO;
+    prices.storagePerWh.LTO = parseFloat(byId('priceLTO').value)||prices.storagePerWh.LTO;
+    prices.storagePerWh.NiMH = parseFloat(byId('priceNiMH').value)||prices.storagePerWh.NiMH;
+    prices.storagePerWh.Supercap = parseFloat(byId('priceSupercap').value)||prices.storagePerWh.Supercap;
+    prices.storagePerWh.Hybridcap = parseFloat(byId('priceHybridcap').value)||prices.storagePerWh.Hybridcap;
+    pricesModal.classList.remove('show');
+    calculate();
+  });
+
   window.addEventListener('click',(e)=>{
     if(e.target===constantsModal) byId('constantsClose').click();
     if(e.target===calculatedModal) calculatedModal.classList.remove('show');
+    if(e.target===pricesModal) pricesModal.classList.remove('show');
   });
 
   // Reset
   byId('resetBtn').addEventListener('click', ()=>{
     const set=(id,v)=>{ const el=byId(id); if(el){ el.value=v; el.dispatchEvent(new Event('input')); } };
-    set('systemVoltage',3.0); set('systemVoltageNum',3.0);
+    set('systemVoltage',2.0); set('systemVoltageNum',2.0);
     set('intervalBetweenPulses',600); set('intervalBetweenPulsesNum',600);
     set('sleepCurrent',650); set('sleepCurrentNum',650);
     set('pulseDuration',5); set('pulseDurationNum',5);
@@ -682,19 +830,9 @@ window.addEventListener('DOMContentLoaded', () => {
     set('lightIntensity',200); set('lightIntensityNum',200);
     set('lightDuration',60); set('lightDurationNum',60);
     set('deviceLifetime',36); set('deviceLifetimeNum',36);
-
-    // radios default
-    const stor=document.querySelector('input[name="storageType"][value="LiPo"]'); if(stor) stor.checked=true;
-    const pm=document.querySelector('input[name="pmSolution"][value="PMIC"]'); if(pm) pm.checked=true;
-    document.querySelectorAll('.radio-option').forEach(o=>{
-      o.classList.remove('selected'); o.style.background='white'; o.style.borderColor='#d1d5db'; o.style.color='#111827';
-    });
-    document.querySelectorAll('input[name="storageType"]').forEach(inp=>{
-      if(inp.checked){ const o=inp.closest('.radio-option'); if(o){ o.classList.add('selected'); o.style.background='linear-gradient(135deg,var(--env),var(--env-dark))'; o.style.borderColor='var(--env)'; o.style.color='#fff'; } }
-    });
-    document.querySelectorAll('input[name="pmSolution"]').forEach(inp=>{
-      if(inp.checked){ const o=inp.closest('.radio-option'); if(o){ o.classList.add('selected'); o.style.background='linear-gradient(135deg,var(--env),var(--env-dark))'; o.style.borderColor='var(--env)'; o.style.color='#fff'; } }
-    });
+    byId('storageSelect').value='LiPo';
+    byId('pmSelect').value='PMIC';
+    prices = JSON.parse(JSON.stringify(defaultPrices));
     calculate();
   });
 
