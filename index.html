@@ -1,841 +1,862 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>LEH Sizing Calculator</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.tailwindcss.com" defer></script>
 <style>
-  :root{
-    --sys:#ff5000;      /* system orange */
-    --env:#02a880;      /* environment teal */
-    --g1:#7c5cc7;       /* daily energy gauge gradient end */
-    --g0:#9470d8;       /* daily energy gauge gradient start */
-    --stor0:#f9af19;    /* storage gauge gradient start */
-    --stor1:#e09a0f;    /* storage gauge gradient end */
-    --muted:#e7e7df;
-    --ring:#9ca3af;
-    --overflow:#ef4444;
-    --pm:#2563eb;       /* pmic color */
-    --mod:#06b6d4;      /* module color for cost */
-    --sto:#f59e0b;      /* storage color for cost */
-  }
-  body{font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: var(--muted);}
-  .glass{background: rgba(255,255,255,.96); backdrop-filter: blur(16px); border:1px solid rgba(0,0,0,.06)}
-  .card{box-shadow: 0 10px 24px rgba(0,0,0,.08)}
-  .slider{appearance:none;height:8px;border-radius:6px;background:#d1d5db;outline:none}
-  .slider::-webkit-slider-thumb{appearance:none;width:22px;height:22px;border-radius:50%;background:#fff;border:2px solid #111;box-shadow:0 2px 8px rgba(0,0,0,.2)}
-  .slider::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#fff;border:2px solid #111;box-shadow:0 2px 8px rgba(0,0,0,.2)}
-  /* filled track coloring helper (we paint a gradient up to --val%) */
-  .fillable{background:linear-gradient(90deg, var(--fill, #111) 0%, var(--fill, #111) var(--val,0%), #d1d5db var(--val,0%), #d1d5db 100%)}
-  .sys-fill{--fill: var(--sys)}
-  .env-fill{--fill: var(--env)}
-
-  /* Gauge centers always perfectly centered */
-  .gcenter{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column}
-
-  /* PV visualization */
-  .pv-active{border:3px solid var(--env); background:linear-gradient(135deg, rgba(2,168,128,.08), rgba(2,138,107,.08)); border-radius:8px; position:relative}
-  .pv-footprint{position:absolute;border:2px dashed #6b7280; border-radius:10px; pointer-events:none}
-
-  /* Sidebar vertical title */
-  .vertical-title{writing-mode:vertical-rl; transform: rotate(180deg); letter-spacing:.08em}
-
-  /* Simple modal */
-  .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;z-index:50}
-  .modal.open{display:flex}
+  body{box-sizing:border-box;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#e7e7df}
+  .glass{background:rgba(255,255,255,.95);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.2)}
+  .card{box-shadow:0 20px 25px -5px rgba(0,0,0,.1),0 10px 10px -5px rgba(0,0,0,.04)}
+  :root{--sys:#ff5000;--sys-dark:#e04500;--env:#02a880;--env-dark:#028a6b;--track:#d1d5db;--pmic:#06b6d4;--storage:#f9af19}
+  .slider{-webkit-appearance:none;appearance:none;height:8px;border-radius:4px;background:var(--track);outline:0}
+  .system-slider::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;border:0;background:linear-gradient(135deg,var(--sys),var(--sys-dark));box-shadow:0 4px 12px rgba(255,80,0,.35)}
+  .system-slider::-moz-range-thumb{width:22px;height:22px;border-radius:50%;border:0;background:linear-gradient(135deg,var(--sys),var(--sys-dark));box-shadow:0 4px 12px rgba(255,80,0,.35)}
+  .env-slider::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;border:0;background:linear-gradient(135deg,var(--env),var(--env-dark));box-shadow:0 4px 12px rgba(2,168,128,.35)}
+  .env-slider::-moz-range-thumb{width:22px;height:22px;border-radius:50%;border:0;background:linear-gradient(135deg,var(--env),var(--env-dark));box-shadow:0 4px 12px rgba(2,168,128,.35)}
+  .input-field{transition:all .2s ease;border-radius:8px}
+  .system-input{border-color:var(--sys)!important}.system-input:focus{box-shadow:0 4px 12px rgba(255,80,0,.25)!important;border-color:var(--sys)!important}
+  .env-input{border-color:var(--env)!important}.env-input:focus{box-shadow:0 4px 12px rgba(2,168,128,.25)!important;border-color:var(--env)!important}
+  .gauge{background:#e7e7df;border:1px solid rgba(0,0,0,.06)}
+  /* PV preview */
+  #pvPreview{position:relative;display:inline-block;min-width:140px;min-height:140px}
+  .pv-square{position:absolute;border:3px solid var(--env);border-radius:8px;background:linear-gradient(135deg,rgba(2,168,128,.08),rgba(2,138,107,.08))}
+  #pvFrame{position:absolute;border:2px dashed #34d399;border-radius:6px;pointer-events:none}
+  #pvLabelTop{position:absolute;font-size:12px;color:#065f46;background:rgba(255,255,255,.9);padding:2px 4px;border-radius:6px;border:1px solid #a7f3d0}
+  #pvLabelLeft{position:absolute;font-size:12px;color:#065f46;background:rgba(255,255,255,.9);padding:2px 4px;border-radius:6px;border:1px solid #a7f3d0;writing-mode:vertical-rl;text-orientation:mixed}
+  .frameLabel{position:absolute;font-size:12px;color:#065f46;padding:2px 6px;border-radius:6px}
+  #pvFrameLabelRight,#pvFrameLabelBottom{background:transparent!important;border:none!important}
+  #pvFrameLabelRight{writing-mode:vertical-rl;text-orientation:mixed}
+  /* Sidebar */
+  .sidebar{background:linear-gradient(180deg,#0f172a,#0b2457 60%,#0f172a);color:#fff}
+  .vertical-title{writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg)}
+  .sidebtn{display:flex;align-items:center;justify-content:center;height:44px;border-radius:10px;font-weight:600}
+  .sidebtn-primary{background:linear-gradient(135deg,#06b6d4,#10b981)}
+  .sidebtn-secondary{background:linear-gradient(135deg,#64748b,#475569)}
+  .sidebtn-ghost{border:1px solid rgba(255,255,255,.3);background:transparent}
+  /* Modals */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:50;display:none}
+  .modal.show{display:flex}
 </style>
 </head>
 <body class="min-h-screen">
-  <div class="max-w-7xl mx-auto grid grid-cols-[74px,1fr] gap-4 p-4">
-    <!-- Left Vertical Sidebar -->
-    <aside class="glass card rounded-2xl flex flex-col items-center py-4 gap-4">
-      <div class="text-sm font-bold vertical-title text-gray-800">LEH-enabled Asset Tracker</div>
-      <div class="w-8 h-px bg-gray-300"></div>
-      <button id="btnConstants" class="text-xs px-2 py-1 rounded-md bg-gray-800 text-white hover:bg-gray-700">Constants</button>
-      <button id="btnCalcVals" class="text-xs px-2 py-1 rounded-md bg-blue-600 text-white hover:bg-blue-500">Calculations</button>
-      <button id="btnPrices"   class="text-xs px-2 py-1 rounded-md bg-emerald-600 text-white hover:bg-emerald-500">Prices</button>
+  <!-- 2-column layout: left sidebar + main -->
+  <div class="grid" style="grid-template-columns: 160px 1fr; min-height: 100vh;">
+    <!-- Sidebar -->
+    <aside class="sidebar p-3 md:p-4 flex flex-col gap-4 items-stretch">
+      <div class="flex-1 flex items-center justify-center">
+        <div class="vertical-title text-center text-lg md:text-xl font-bold leading-none">
+          LEH-enabled Asset Tracker
+        </div>
+      </div>
+      <div class="flex flex-col gap-2">
+        <button id="resetBtn" class="sidebtn sidebtn-secondary">Reset</button>
+        <button id="constantsBtn" class="sidebtn sidebtn-ghost">Constants</button>
+        <button id="pricesBtn" class="sidebtn sidebtn-ghost">Prices</button>
+        <button id="calculatedBtn" class="sidebtn sidebtn-primary">Calculated</button>
+      </div>
     </aside>
 
-    <!-- Right Content -->
-    <main class="space-y-4">
-      <!-- Controls -->
-      <section class="grid lg:grid-cols-2 gap-4">
-        <!-- System Parameters -->
-        <div class="glass card rounded-2xl p-5 border border-orange-200">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-2.5 h-8 rounded-full" style="background:linear-gradient(#ff5000,#e04500)"></div>
-            <h2 class="text-xl font-bold text-gray-800">System Parameters</h2>
-          </div>
-
-          <div class="space-y-4">
-            <!-- System Voltage -->
-            <div>
-              <label class="text-sm text-gray-700">System Voltage (V)</label>
-              <div class="flex items-center gap-3">
-                <input id="v" type="range" min="1.4" max="3.3" step="0.1" value="2.0" class="slider fillable sys-fill flex-1">
-                <input id="vNum" type="number" step="0.1" min="1.4" max="3.3" value="2.0" class="w-20 px-2 py-1 border rounded-md text-center">
-              </div>
+    <!-- Main content -->
+    <main class="p-3 md:p-5">
+      <div class="max-w-7xl mx-auto glass rounded-2xl card p-4 md:p-6">
+        <!-- Controls -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
+          <!-- System -->
+          <div class="p-4 md:p-5 rounded-2xl card border border-orange-200" style="background:#e7e7df">
+            <div class="flex items-center mb-3">
+              <div class="w-3 h-8 rounded-full mr-3" style="background:linear-gradient(to bottom,var(--sys),var(--sys-dark))"></div>
+              <h3 class="text-lg md:text-xl font-bold text-gray-800">System Parameters</h3>
             </div>
-
-            <!-- Interval -->
-            <div>
-              <label class="text-sm text-gray-700">Interval Between Pulses (s)</label>
-              <div class="flex items-center gap-3">
-                <input id="T" type="range" min="1" max="3600" step="10" value="600" class="slider fillable sys-fill flex-1">
-                <input id="TNum" type="number" step="10" min="1" max="3600" value="600" class="w-24 px-2 py-1 border rounded-md text-center">
-              </div>
-            </div>
-
-            <!-- Sleep Current -->
-            <div>
-              <label class="text-sm text-gray-700">Sleep Current (nA)</label>
-              <div class="flex items-center gap-3">
-                <input id="Is" type="range" min="0" max="1000" step="10" value="650" class="slider fillable sys-fill flex-1">
-                <input id="IsNum" type="number" step="10" min="0" max="1000" value="650" class="w-24 px-2 py-1 border rounded-md text-center">
-              </div>
-            </div>
-
-            <!-- Pulse Duration -->
-            <div>
-              <label class="text-sm text-gray-700">Pulse Duration (ms)</label>
-              <div class="flex items-center gap-3">
-                <input id="tp" type="range" min="0.5" max="50" step="0.5" value="5" class="slider fillable sys-fill flex-1">
-                <input id="tpNum" type="number" step="0.5" min="0.5" max="50" value="5" class="w-24 px-2 py-1 border rounded-md text-center">
-              </div>
-            </div>
-
-            <!-- Pulse Current -->
-            <div>
-              <label class="text-sm text-gray-700">Pulse Current (mA)</label>
-              <div class="flex items-center gap-3">
-                <input id="Ip" type="range" min="0.1" max="30" step="0.1" value="11" class="slider fillable sys-fill flex-1">
-                <input id="IpNum" type="number" step="0.1" min="0.1" max="30" value="11" class="w-24 px-2 py-1 border rounded-md text-center">
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Environmental Parameters -->
-        <div class="glass card rounded-2xl p-5 border border-emerald-200">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-2.5 h-8 rounded-full" style="background:linear-gradient(#02a880,#028a6b)"></div>
-            <h2 class="text-xl font-bold text-gray-800">Environmental Parameters</h2>
-          </div>
-
-          <div class="space-y-4">
-            <!-- Light Intensity -->
-            <div>
-              <label class="text-sm text-gray-700">Light Intensity (lux)</label>
-              <div class="flex items-center gap-3">
-                <input id="lux" type="range" min="1" max="2000" step="1" value="200" class="slider fillable env-fill flex-1">
-                <input id="luxNum" type="number" step="1" min="1" max="2000" value="200" class="w-24 px-2 py-1 border rounded-md text-center">
-              </div>
-            </div>
-
-            <!-- Light Duration -->
-            <div>
-              <label class="text-sm text-gray-700">Light Duration per Day (min)</label>
-              <div class="flex items-center gap-3">
-                <input id="lday" type="range" min="1" max="1440" step="1" value="60" class="slider fillable env-fill flex-1">
-                <input id="ldayNum" type="number" step="1" min="1" max="1440" value="60" class="w-24 px-2 py-1 border rounded-md text-center">
-              </div>
-            </div>
-
-            <!-- Device Lifetime -->
-            <div>
-              <label class="text-sm text-gray-700">Device Lifetime (months)</label>
-              <div class="flex items-center gap-3">
-                <input id="life" type="range" min="1" max="120" step="1" value="36" class="slider fillable env-fill flex-1">
-                <input id="lifeNum" type="number" step="1" min="1" max="120" value="36" class="w-24 px-2 py-1 border rounded-md text-center">
-              </div>
-            </div>
-
-            <!-- Darkness Period -->
-            <div>
-              <label class="text-sm text-gray-700">Darkness Period (months)</label>
-              <div class="flex items-center gap-3">
-                <input id="dark" type="range" min="0" max="12" step="0.5" value="3" class="slider fillable env-fill flex-1">
-                <input id="darkNum" type="number" step="0.5" min="0" max="12" value="3" class="w-24 px-2 py-1 border rounded-md text-center">
-              </div>
-            </div>
-
-            <!-- Storage type + PM solution dropdowns -->
-            <div class="grid sm:grid-cols-2 gap-3">
+            <div class="space-y-3">
               <div>
-                <label class="text-sm text-gray-700">Energy Storage Type</label>
-                <select id="storageType" class="w-full px-2 py-2 border rounded-md">
-                  <option value="CR">CR (ann. 1.5%)</option>
-                  <option value="LiPo" selected>LiPo (2.5%/mo)</option>
-                  <option value="LiFePO">LiFePO (1.5%/mo)</option>
-                  <option value="LTO">LTO (3%/mo)</option>
-                  <option value="NiMH">NiMH (1.5%/mo)</option>
-                  <option value="Supercap">Supercap (20%/mo)</option>
-                  <option value="Hybridcap">Hybridcap (20%/mo)</option>
-                </select>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="systemVoltage">System Voltage (V)</label>
+                <div class="flex items-center gap-3">
+                  <input type="range" id="systemVoltage" class="slider system-slider flex-1" min="1.4" max="3.3" step="0.1" value="2.0">
+                  <input type="number" id="systemVoltageNum" class="system-input input-field w-24 px-3 py-2 border-2 rounded-lg text-sm text-center bg-white focus:outline-none" min="1.4" max="3.3" step="0.1" value="2.0">
+                </div>
               </div>
               <div>
-                <label class="text-sm text-gray-700">PM Solution</label>
-                <select id="pmSol" class="w-full px-2 py-2 border rounded-md">
-                  <option value="PMIC" selected>Full PMIC (90%)</option>
-                  <option value="Discrete">Discrete (75%)</option>
-                  <option value="Direct">Direct-to-MCU (50%)</option>
-                </select>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="intervalBetweenPulses">Interval Between Pulses (s)</label>
+                <div class="flex items-center gap-3">
+                  <input type="range" id="intervalBetweenPulses" class="slider system-slider flex-1" min="1" max="3600" step="10" value="600">
+                  <input type="number" id="intervalBetweenPulsesNum" class="system-input input-field w-24 px-3 py-2 border-2 rounded-lg text-sm text-center bg-white focus:outline-none" min="1" max="3600" step="10" value="600">
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="sleepCurrent">Sleep Current (nA)</label>
+                <div class="flex items-center gap-3">
+                  <input type="range" id="sleepCurrent" class="slider system-slider flex-1" min="0" max="1000" step="10" value="650">
+                  <input type="number" id="sleepCurrentNum" class="system-input input-field w-24 px-3 py-2 border-2 rounded-lg text-sm text-center bg-white focus:outline-none" min="0" max="1000" step="10" value="650">
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="pulseDuration">Pulse Duration (ms)</label>
+                <div class="flex items-center gap-3">
+                  <input type="range" id="pulseDuration" class="slider system-slider flex-1" min="0.5" max="50" step="0.5" value="5">
+                  <input type="number" id="pulseDurationNum" class="system-input input-field w-24 px-3 py-2 border-2 rounded-lg text-sm text-center bg-white focus:outline-none" min="0.5" max="50" step="0.5" value="5">
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="pulseCurrent">Pulse Current (mA)</label>
+                <div class="flex items-center gap-3">
+                  <input type="range" id="pulseCurrent" class="slider system-slider flex-1" min="0.1" max="30" step="0.1" value="11">
+                  <input type="number" id="pulseCurrentNum" class="system-input input-field w-24 px-3 py-2 border-2 rounded-lg text-sm text-center bg-white focus:outline-none" min="0.1" max="30" step="0.1" value="11">
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
 
-      <!-- Results: Daily / Storage + LEH (spanning) -->
-      <section class="grid md:grid-cols-3 gap-4">
-        <!-- Daily Energy (short) -->
-        <div class="glass card rounded-2xl p-5">
-          <div class="flex items-center justify-center mb-2">
-            <h3 class="text-lg font-bold text-gray-800 text-center">Daily Energy Consumption</h3>
-          </div>
-          <div class="flex justify-center">
-            <div class="relative w-40 h-40">
-              <svg class="w-40 h-40 -rotate-90" viewBox="0 0 160 160">
-                <defs>
-                  <linearGradient id="gDaily" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stop-color="#9470d8"/><stop offset="100%" stop-color="#7c5cc7"/>
-                  </linearGradient>
-                </defs>
-                <circle cx="80" cy="80" r="70" stroke="#e5e7eb" stroke-width="18" fill="none"/>
-                <!-- main fill -->
-                <circle id="dailyFill" cx="80" cy="80" r="70" stroke="url(#gDaily)" stroke-width="18" fill="none" stroke-linecap="round" stroke-dasharray="439.8" stroke-dashoffset="439.8"/>
-                <!-- overflow ring -->
-                <circle id="dailyOver" cx="80" cy="80" r="60" stroke="var(--overflow)" stroke-width="6" fill="none" stroke-linecap="round" stroke-dasharray="377" stroke-dashoffset="377" opacity="0.0"/>
-              </svg>
-              <div class="gcenter">
-                <div id="Eday" class="text-2xl font-bold" style="color:#7c5cc7">0.000</div>
-                <div class="text-xs text-gray-600">mWh</div>
-                <div id="dailyNote" class="text-[11px] text-gray-500"></div>
-              </div>
+          <!-- Environmental -->
+          <div class="p-4 md:p-5 rounded-2xl card border border-emerald-200" style="background:#e7e7df">
+            <div class="flex items-center mb-3">
+              <div class="w-3 h-8 rounded-full mr-3" style="background:linear-gradient(to bottom,var(--env),var(--env-dark))"></div>
+              <h3 class="text-lg md:text-xl font-bold text-gray-800">Environmental Parameters</h3>
             </div>
-          </div>
-          <div class="text-xs text-gray-600 text-center mt-2 space-y-1">
-            <div>Pulses: <span id="PulseDay" class="font-medium" style="color:#9470d8">0.000</span> mWh/day</div>
-            <div>Sleep: <span id="SleepDay" class="font-medium" style="color:#7c5cc7">0.000</span> mWh/day</div>
-          </div>
-        </div>
-
-        <!-- Storage (short) -->
-        <div class="glass card rounded-2xl p-5">
-          <div class="flex items-center justify-center mb-2">
-            <h3 class="text-lg font-bold text-gray-800 text-center">Energy Storage Requirements</h3>
-          </div>
-          <div class="flex justify-center">
-            <div class="relative w-40 h-40">
-              <svg class="w-40 h-40 -rotate-90" viewBox="0 0 160 160">
-                <defs>
-                  <linearGradient id="gStor" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stop-color="#f9af19"/><stop offset="100%" stop-color="#e09a0f"/>
-                  </linearGradient>
-                </defs>
-                <circle cx="80" cy="80" r="70" stroke="#e5e7eb" stroke-width="18" fill="none"/>
-                <!-- main fill -->
-                <circle id="storFill" cx="80" cy="80" r="70" stroke="url(#gStor)" stroke-width="18" fill="none" stroke-linecap="round" stroke-dasharray="439.8" stroke-dashoffset="439.8"/>
-                <!-- overflow ring -->
-                <circle id="storOver" cx="80" cy="80" r="60" stroke="var(--overflow)" stroke-width="6" fill="none" stroke-linecap="round" stroke-dasharray="377" stroke-dashoffset="377" opacity="0.0"/>
-              </svg>
-              <div class="gcenter">
-                <div id="StorTot" class="text-2xl font-bold" style="color:#e09a0f">0.000</div>
-                <div class="text-xs text-gray-600">mWh</div>
-                <div id="storNote" class="text-[11px] text-gray-500"></div>
+            <div class="space-y-3">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="lightIntensity">Light Intensity (lux)</label>
+                <div class="flex items-center gap-3">
+                  <input type="range" id="lightIntensity" class="slider env-slider flex-1" min="1" max="2000" step="1" value="200">
+                  <input type="number" id="lightIntensityNum" class="env-input input-field w-24 px-3 py-2 border-2 rounded-lg text-sm text-center bg-white focus:outline-none" min="1" max="2000" step="1" value="200">
+                </div>
               </div>
-            </div>
-          </div>
-          <div class="text-xs text-gray-600 text-center mt-2 space-y-1">
-            <div>Dark Period: <span id="DarkE" class="font-medium" style="color:#f9af19">0.000</span> mWh</div>
-            <div>Min Storage: <span id="MinStor" class="font-medium" style="color:#e09a0f">0.000</span> mWh</div>
-            <div>Self-discharge: <span id="SdPct" class="font-medium" style="color:#d97706">0.0</span>%/mo</div>
-          </div>
-        </div>
-
-        <!-- LEH Energy Generated (wide) -->
-        <div class="glass card rounded-2xl p-5 md:col-span-1 lg:col-span-1 xl:col-span-1 md:col-start-1 md:col-end-4">
-          <h3 class="text-lg font-bold text-gray-800 mb-3 text-center">LEH Energy Generated (EOL)</h3>
-          <div class="grid sm:grid-cols-2 gap-4">
-            <!-- PV-only -->
-            <div class="border rounded-xl p-3">
-              <div class="text-sm font-semibold text-gray-700 mb-1">PV-only (before PM)</div>
-              <div class="grid grid-cols-3 gap-2 text-center">
-                <div><div class="text-2xl font-bold text-emerald-700" id="PVday">0.000</div><div class="text-xs text-gray-500">mWh/day</div></div>
-                <div><div class="text-2xl font-bold text-emerald-700" id="PVmonth">0.000</div><div class="text-xs text-gray-500">mWh/mo</div></div>
-                <div><div class="text-2xl font-bold text-emerald-700" id="PVlife">0.000</div><div class="text-xs text-gray-500">mWh/life</div></div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="lightDuration">Light Duration per Day (min)</label>
+                <div class="flex items-center gap-3">
+                  <input type="range" id="lightDuration" class="slider env-slider flex-1" min="1" max="1440" step="1" value="60">
+                  <input type="number" id="lightDurationNum" class="env-input input-field w-24 px-3 py-2 border-2 rounded-lg text-sm text-center bg-white focus:outline-none" min="1" max="1440" step="1" value="60">
+                </div>
               </div>
-            </div>
-            <!-- Post-PM -->
-            <div class="border rounded-xl p-3">
-              <div class="text-sm font-semibold text-gray-700 mb-1">Post-PM (delivered)</div>
-              <div class="grid grid-cols-3 gap-2 text-center">
-                <div><div class="text-2xl font-bold text-blue-700" id="PMday">0.000</div><div class="text-xs text-gray-500">mWh/day</div></div>
-                <div><div class="text-2xl font-bold text-blue-700" id="PMmonth">0.000</div><div class="text-xs text-gray-500">mWh/mo</div></div>
-                <div><div class="text-2xl font-bold text-blue-700" id="PMlife">0.000</div><div class="text-xs text-gray-500">mWh/life</div></div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="deviceLifetime">Device Lifetime (months)</label>
+                <div class="flex items-center gap-3">
+                  <input type="range" id="deviceLifetime" class="slider env-slider flex-1" min="1" max="120" step="1" value="36">
+                  <input type="number" id="deviceLifetimeNum" class="env-input input-field w-24 px-3 py-2 border-2 rounded-lg text-sm text-center bg-white focus:outline-none" min="1" max="120" step="1" value="36">
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
-      <!-- Required PV Module + Cost -->
-      <section class="grid lg:grid-cols-2 gap-4">
-        <!-- PV Module (EOL) -->
-        <div class="glass card rounded-2xl p-5">
-          <div class="flex items-center gap-3 mb-2">
-            <div class="w-2.5 h-6 rounded-full" style="background:linear-gradient(#02a880,#028a6b)"></div>
-            <h3 class="text-lg font-bold text-gray-800">Required PV Area (EOL)</h3>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div class="space-y-1">
-              <div class="text-sm text-gray-600">Area</div>
-              <div class="text-3xl font-bold text-emerald-700" id="Area">0.00</div>
-              <div class="text-xs text-gray-500">cm²</div>
-
-              <div class="mt-3 text-sm text-gray-600">Square side (active)</div>
-              <div class="text-xl font-semibold text-emerald-700" id="SideActive">0.00 cm</div>
-
-              <div class="mt-3 text-sm text-gray-600">Square side (footprint)</div>
-              <div class="text-xl font-semibold text-gray-700" id="SideFoot">0.00 cm</div>
-
-              <div class="mt-3 text-sm text-gray-600">PM efficiency</div>
-              <div class="text-lg font-semibold text-blue-700" id="PMEff">90%</div>
-            </div>
-
-            <!-- Real size preview -->
-            <div class="flex items-center justify-center">
-              <div class="relative">
-                <!-- labels inside active square -->
-                <div id="labelTopIn" class="absolute text-[11px] text-gray-700 top-1 left-1/2 -translate-x-1/2 bg-white/70 px-1 rounded"></div>
-                <div id="labelLeftIn" class="absolute text-[11px] text-gray-700 left-1 top-1/2 -translate-y-1/2 rotate-[-90deg] bg-white/70 px-1 rounded"></div>
-                <!-- active square -->
-                <div id="pvActive" class="pv-active" style="width:60px;height:60px"></div>
-                <!-- footprint frame (6.5 mm offset) -->
-                <div id="pvFoot" class="pv-footprint"></div>
-                <!-- footprint labels (right & bottom) -->
-                <div id="labelRightFoot" class="absolute text-[11px] text-gray-700 bg-white/70 px-1 rounded"></div>
-                <div id="labelBottomFoot" class="absolute text-[11px] text-gray-700 bg-white/70 px-1 rounded"></div>
+              <!-- NEW: compact dropdowns -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label for="storageSelect" class="block text-sm font-medium text-gray-700 mb-1">Energy Storage Type</label>
+                  <select id="storageSelect" class="env-input input-field w-full px-3 py-2 border-2 rounded-lg bg-white focus:outline-none">
+                    <option value="CR">CR (1.5%/yr)</option>
+                    <option value="LiPo" selected>LiPo (2.5%/mo)</option>
+                    <option value="LiFePO">LiFePO (1.5%/mo)</option>
+                    <option value="LTO">LTO (3%/mo)</option>
+                    <option value="NiMH">NiMH (1.5%/mo)</option>
+                    <option value="Supercap">Supercap (20%/mo)</option>
+                    <option value="Hybridcap">Hybridcap (20%/mo)</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="pmSelect" class="block text-sm font-medium text-gray-700 mb-1">PM Solution</label>
+                  <select id="pmSelect" class="env-input input-field w-full px-3 py-2 border-2 rounded-lg bg-white focus:outline-none">
+                    <option value="PMIC" selected>Full PMIC (90%)</option>
+                    <option value="Discrete">Discrete (75%)</option>
+                    <option value="Direct">Direct-to-MCU (50%)</option>
+                  </select>
+                </div>
               </div>
+
             </div>
           </div>
         </div>
 
-        <!-- Cost -->
-        <div class="glass card rounded-2xl p-5">
-          <div class="flex items-center gap-3 mb-2">
-            <div class="w-2.5 h-6 rounded-full bg-gray-800"></div>
-            <h3 class="text-lg font-bold text-gray-800">Cost</h3>
-          </div>
-          <div class="grid sm:grid-cols-[180px,1fr] gap-4 items-center">
-            <!-- Pie gauge -->
-            <div class="relative w-40 h-40 mx-auto">
-              <svg class="w-40 h-40 -rotate-90" viewBox="0 0 160 160">
-                <circle cx="80" cy="80" r="70" stroke="#e5e7eb" stroke-width="18" fill="none"/>
-                <!-- three segments (module, pmic, storage) -->
-                <circle id="segModule"  cx="80" cy="80" r="70" stroke="var(--mod)" stroke-width="18" fill="none" stroke-dasharray="0 439.8" stroke-linecap="butt"/>
-                <circle id="segPMIC"    cx="80" cy="80" r="70" stroke="var(--pm)"  stroke-width="18" fill="none" stroke-dasharray="0 439.8" stroke-linecap="butt"/>
-                <circle id="segStorage" cx="80" cy="80" r="70" stroke="var(--sto)" stroke-width="18" fill="none" stroke-dasharray="0 439.8" stroke-linecap="butt"/>
-              </svg>
-              <div class="gcenter">
-                <div class="text-xs text-gray-500">Total</div>
-                <div id="CostTotal" class="text-2xl font-bold text-gray-900">$0.00</div>
+        <!-- Results grid: 3 columns: [Daily] [Storage] [PV]; LEH spans 1-2; COST spans 1-2 below -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+          <!-- Daily (short) -->
+          <div class="gauge p-4 rounded-2xl card">
+            <div class="flex items-center justify-center mb-2">
+              <div class="w-2 h-6 rounded-full mr-3" style="background:linear-gradient(to bottom,#9470d8,#7c5cc7)"></div>
+              <h4 class="text-lg font-bold text-gray-800 text-center">Daily Energy Consumption</h4>
+            </div>
+            <div class="flex justify-center mb-2">
+              <div class="relative w-28 h-28">
+                <svg class="-rotate-90 w-28 h-28" viewBox="0 0 160 160" aria-hidden="true">
+                  <circle cx="80" cy="80" r="70" stroke="#9ca3af" stroke-width="18" fill="none"/>
+                  <circle id="dailyEnergyGauge" cx="80" cy="80" r="70" stroke="url(#dailyGradient)" stroke-width="18" fill="none" stroke-linecap="round" stroke-dasharray="439.8229715" stroke-dashoffset="439.8229715"/>
+                  <circle id="dailyOverflow" cx="80" cy="80" r="58" stroke="#7c5cc7" stroke-width="10" fill="none" stroke-linecap="round" stroke-dasharray="364.424747" stroke-dashoffset="364.424747" class="opacity-0"/>
+                  <defs>
+                    <linearGradient id="dailyGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#9470d8"/><stop offset="100%" stop-color="#7c5cc7"/></linearGradient>
+                  </defs>
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                  <div id="dailyEnergy" class="text-lg font-bold" style="color:#9470d8">0.000</div>
+                  <div class="text-[11px] text-gray-600">mWh</div>
+                </div>
               </div>
             </div>
-            <!-- Legend -->
-            <div class="text-sm">
-              <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm inline-block" style="background:var(--mod)"></span> Module: <span id="CostModule" class="font-semibold ml-1">$0.00</span></div>
-              <div class="flex items-center gap-2 mt-1"><span class="w-3 h-3 rounded-sm inline-block" style="background:var(--pm)"></span> PMIC: <span id="CostPMIC" class="font-semibold ml-1">$0.00</span></div>
-              <div class="flex items-center gap-2 mt-1"><span class="w-3 h-3 rounded-sm inline-block" style="background:var(--sto)"></span> Storage: <span id="CostStorage" class="font-semibold ml-1">$0.00</span></div>
-              <div class="mt-3 text-xs text-gray-500">Module price and energy-storage $/Wh can be edited in the Prices panel.</div>
+            <div class="text-[12px] text-gray-600 text-center space-y-1">
+              <div>Pulses: <span id="pulseEnergy" class="font-medium" style="color:#9470d8">0.000</span> mWh/day</div>
+              <div>Sleep: <span id="sleepEnergy" class="font-medium" style="color:#7c5cc7">0.000</span> mWh/day</div>
             </div>
           </div>
-        </div>
-      </section>
 
+          <!-- Storage (short) -->
+          <div class="gauge p-4 rounded-2xl card">
+            <div class="flex items-center justify-center mb-2">
+              <div class="w-2 h-6 rounded-full mr-3" style="background:linear-gradient(to bottom,#f9af19,#e09a0f)"></div>
+              <h4 class="text-lg font-bold text-gray-800 text-center">Energy Storage Requirements</h4>
+            </div>
+            <div class="flex justify-center mb-2">
+              <div class="relative w-28 h-28">
+                <svg class="-rotate-90 w-28 h-28" viewBox="0 0 160 160" aria-hidden="true">
+                  <circle cx="80" cy="80" r="70" stroke="#9ca3af" stroke-width="18" fill="none"/>
+                  <circle id="storageGauge" cx="80" cy="80" r="70" stroke="url(#storageGradient)" stroke-width="18" fill="none" stroke-linecap="round" stroke-dasharray="439.8229715" stroke-dashoffset="439.8229715"/>
+                  <circle id="storageOverflow" cx="80" cy="80" r="58" stroke="#e09a0f" stroke-width="10" fill="none" stroke-linecap="round" stroke-dasharray="364.424747" stroke-dashoffset="364.424747" class="opacity-0"/>
+                  <defs>
+                    <linearGradient id="storageGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#f9af19"/><stop offset="100%" stop-color="#e09a0f"/></linearGradient>
+                  </defs>
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                  <div id="totalStorage" class="text-lg font-bold" style="color:#f9af19">0.000</div>
+                  <div class="text-[11px] text-gray-600">mWh</div>
+                </div>
+              </div>
+            </div>
+            <div class="text-[12px] text-gray-600 text-center space-y-1">
+              <div>Dark Period: <span id="darkPeriodEnergy" class="font-medium" style="color:#f9af19">0.000</span> mWh</div>
+              <div>Min Storage: <span id="minStorage" class="font-medium" style="color:#e09a0f">0.000</span> mWh</div>
+              <div>Self-discharge: <span id="selfDischarge" class="font-medium" style="color:#d18b0a">0.0</span>%/mo</div>
+            </div>
+          </div>
+
+          <!-- PV Area (spans 2 rows) -->
+          <div class="gauge p-4 rounded-2xl card md:row-span-2">
+            <div class="flex items-center mb-2">
+              <div class="w-2 h-6 rounded-full mr-3" style="background:linear-gradient(to bottom,var(--env),var(--env-dark))"></div>
+              <h4 class="text-lg md:text-xl font-bold text-gray-800">Required PV Area (EOL)</h4>
+            </div>
+            <div class="text-center">
+              <div id="pvArea" class="text-2xl md:text-3xl font-bold" style="color:var(--env)">0.00</div>
+              <div class="text-gray-600 text-sm mb-2">cm²</div>
+              <div class="text-[13px] text-gray-600 mb-3">
+                Square side (active): <span id="pvSideActive" class="font-medium">0.00</span> cm<br/>
+                Square side (footprint): <span id="pvSideFootprint" class="font-medium">0.00</span> cm<br/>
+                PM efficiency: <span id="pmEfficiency" class="font-medium">90</span>%
+              </div>
+            </div>
+            <div class="text-center">
+              <div class="text-sm font-medium text-gray-700 mb-2">Real-Size Preview</div>
+              <div id="pvPreview" class="relative inline-block mb-2">
+                <div id="pvFrame"></div>
+                <div id="pvSquare" class="pv-square"></div>
+                <!-- inside active labels -->
+                <div id="pvLabelTop">0.00 cm</div>
+                <div id="pvLabelLeft">0.00 cm</div>
+                <!-- footprint labels right & bottom (no background fill) -->
+                <div id="pvFrameLabelRight" class="frameLabel">0.00 cm footprint</div>
+                <div id="pvFrameLabelBottom" class="frameLabel">0.00 cm footprint</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- LEH Energy (spans cols 1-2) -->
+          <div class="gauge p-4 rounded-2xl card md:col-span-2">
+            <div class="flex items-center mb-2">
+              <div class="w-2 h-6 rounded-full mr-3" style="background:linear-gradient(to bottom,#06b6d4,#10b981)"></div>
+              <h4 class="text-xl font-bold text-gray-800">LEH Energy Generated (EOL)</h4>
+            </div>
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-2">
+              <div class="bg-white/70 rounded-xl p-3 border border-emerald-100">
+                <div class="text-xs text-emerald-700 font-semibold mb-1">PV-only</div>
+                <div class="text-sm text-gray-500 mb-1">Instant Power</div>
+                <div class="text-2xl font-bold text-emerald-700"><span id="lehPower_mW">0.000</span> <span class="text-base font-semibold">mW</span></div>
+              </div>
+              <div class="bg-white/70 rounded-xl p-3 border border-emerald-100">
+                <div class="text-xs text-emerald-700 font-semibold mb-1">PV-only</div>
+                <div class="text-sm text-gray-500 mb-1">Energy per Day</div>
+                <div class="text-2xl font-bold text-emerald-700"><span id="lehEnergyDay_mWh">0.000</span> <span class="text-base font-semibold">mWh</span></div>
+              </div>
+              <div class="bg-white/70 rounded-xl p-3 border border-emerald-100">
+                <div class="text-xs text-emerald-700 font-semibold mb-1">PV-only</div>
+                <div class="text-sm text-gray-500 mb-1">Energy per Month</div>
+                <div class="text-2xl font-bold text-emerald-700"><span id="lehEnergyMonth_mWh">0.000</span> <span class="text-base font-semibold">mWh</span></div>
+              </div>
+              <div class="bg-white/70 rounded-xl p-3 border border-emerald-100">
+                <div class="text-xs text-emerald-700 font-semibold mb-1">PV-only</div>
+                <div class="text-sm text-gray-500 mb-1">Energy over Lifetime</div>
+                <div class="text-2xl font-bold text-emerald-700"><span id="lehEnergyLife_Wh">0.000</span> <span class="text-base font-semibold">Wh</span></div>
+              </div>
+            </div>
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div class="bg-white/70 rounded-xl p-3 border border-emerald-100">
+                <div class="text-xs text-emerald-700 font-semibold mb-1">After PM (×<span id="lehPmEffLabel1">90</span>%)</div>
+                <div class="text-sm text-gray-500 mb-1">Instant Power</div>
+                <div class="text-2xl font-bold text-emerald-700"><span id="lehPower_mW_pm">0.000</span> <span class="text-base font-semibold">mW</span></div>
+              </div>
+              <div class="bg-white/70 rounded-xl p-3 border border-emerald-100">
+                <div class="text-xs text-emerald-700 font-semibold mb-1">After PM (×<span id="lehPmEffLabel2">90</span>%)</div>
+                <div class="text-sm text-gray-500 mb-1">Energy per Day</div>
+                <div class="text-2xl font-bold text-emerald-700"><span id="lehEnergyDay_mWh_pm">0.000</span> <span class="text-base font-semibold">mWh</span></div>
+              </div>
+              <div class="bg-white/70 rounded-xl p-3 border border-emerald-100">
+                <div class="text-xs text-emerald-700 font-semibold mb-1">After PM (×<span id="lehPmEffLabel3">90</span>%)</div>
+                <div class="text-sm text-gray-500 mb-1">Energy per Month</div>
+                <div class="text-2xl font-bold text-emerald-700"><span id="lehEnergyMonth_mWh_pm">0.000</span> <span class="text-base font-semibold">mWh</span></div>
+              </div>
+              <div class="bg-white/70 rounded-xl p-3 border border-emerald-100">
+                <div class="text-xs text-emerald-700 font-semibold mb-1">After PM (×<span id="lehPmEffLabel4">90</span>%)</div>
+                <div class="text-sm text-gray-500 mb-1">Energy over Lifetime</div>
+                <div class="text-2xl font-bold text-emerald-700"><span id="lehEnergyLife_Wh_pm">0.000</span> <span class="text-base font-semibold">Wh</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- COST (spans cols 1-2, row under LEH) -->
+          <div class="gauge p-4 rounded-2xl card md:col-span-2">
+            <div class="flex items-center mb-2">
+              <div class="w-2 h-6 rounded-full mr-3" style="background:linear-gradient(to bottom,#0ea5e9,#10b981)"></div>
+              <h4 class="text-xl font-bold text-gray-800">Cost</h4>
+            </div>
+            <div class="grid md:grid-cols-2 gap-4">
+              <!-- Pie gauge -->
+              <div class="flex items-center justify-center">
+                <div class="relative w-48 h-48">
+                  <svg class="-rotate-90 w-48 h-48" viewBox="0 0 200 200" aria-hidden="true">
+                    <circle cx="100" cy="100" r="80" stroke="#e5e7eb" stroke-width="24" fill="none"/>
+                    <!-- segments: module, pmic, storage -->
+                    <circle id="costSegModule" cx="100" cy="100" r="80" stroke="var(--env)" stroke-width="24" fill="none" stroke-linecap="butt" stroke-dasharray="0 502.654" stroke-dashoffset="0"/>
+                    <circle id="costSegPMIC"   cx="100" cy="100" r="80" stroke="var(--pmic)" stroke-width="24" fill="none" stroke-linecap="butt" stroke-dasharray="0 502.654" stroke-dashoffset="0"/>
+                    <circle id="costSegStore"  cx="100" cy="100" r="80" stroke="var(--storage)" stroke-width="24" fill="none" stroke-linecap="butt" stroke-dasharray="0 502.654" stroke-dashoffset="0"/>
+                  </svg>
+                  <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                    <div class="text-xs text-gray-500">Total</div>
+                    <div id="costTotal" class="text-2xl font-bold text-gray-800">$0.00</div>
+                  </div>
+                </div>
+              </div>
+              <!-- Legend -->
+              <div class="grid grid-cols-1 gap-2 content-center">
+                <div class="flex items-center justify-between bg-white/70 rounded-xl p-3 border">
+                  <div class="flex items-center gap-2">
+                    <span class="inline-block w-3 h-3 rounded-sm" style="background:var(--env)"></span>
+                    <span class="text-sm font-medium text-gray-700">Module (active area)</span>
+                  </div>
+                  <div class="text-lg font-bold text-gray-800" id="costModule">$0.00</div>
+                </div>
+                <div class="flex items-center justify-between bg-white/70 rounded-xl p-3 border">
+                  <div class="flex items-center gap-2">
+                    <span class="inline-block w-3 h-3 rounded-sm" style="background:var(--pmic)"></span>
+                    <span class="text-sm font-medium text-gray-700">PMIC</span>
+                  </div>
+                  <div class="text-lg font-bold text-gray-800" id="costPMIC">$0.00</div>
+                </div>
+                <div class="flex items-center justify-between bg-white/70 rounded-xl p-3 border">
+                  <div class="flex items-center gap-2">
+                    <span class="inline-block w-3 h-3 rounded-sm" style="background:var(--storage)"></span>
+                    <span class="text-sm font-medium text-gray-700">Energy Storage</span>
+                  </div>
+                  <div class="text-lg font-bold text-gray-800" id="costStorage">$0.00</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
     </main>
   </div>
 
   <!-- Constants Modal -->
-  <div id="modalConstants" class="modal items-center justify-center">
-    <div class="bg-white w-11/12 max-w-3xl rounded-2xl p-6">
-      <div class="flex items-center justify-between mb-4">
-        <h4 class="text-xl font-bold">Constants</h4>
-        <button class="px-3 py-1 bg-gray-800 text-white rounded-md" id="closeConstants">Close</button>
+  <div id="constantsModal" class="modal items-center justify-center p-4">
+    <div class="bg-white w-full max-w-4xl max-h-[85vh] overflow-y-auto rounded-xl p-6">
+      <div class="flex justify-between items-center mb-4 pb-3 border-b">
+        <h3 class="text-xl font-bold text-gray-800">Constants</h3>
+        <button id="constantsClose" class="text-3xl font-bold text-gray-400 hover:text-gray-600 leading-none">&times;</button>
       </div>
-      <div class="grid sm:grid-cols-3 gap-4">
-        <div><label class="text-sm">Seconds in Hour</label><input id="c_sih" type="number" value="3600" class="w-full px-2 py-1 border rounded-md"></div>
-        <div><label class="text-sm">Seconds in Day</label><input id="c_sid" type="number" value="86400" class="w-full px-2 py-1 border rounded-md"></div>
-        <div><label class="text-sm">Days in Month</label><input id="c_dim" type="number" value="31" class="w-full px-2 py-1 border rounded-md"></div>
-        <div><label class="text-sm">Power per Lux (mW/cm²/lux)</label><input id="c_plux" step="0.00001" type="number" value="0.00003" class="w-full px-2 py-1 border rounded-md"></div>
-        <div><label class="text-sm">Cell Degradation per Month (%)</label><input id="c_deg" step="0.000001" type="number" value="0.185780" class="w-full px-2 py-1 border rounded-md"></div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">Darkness Period (months)</label><input id="darknessPeriod" type="number" value="3" step="0.1" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500"></div>
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">Seconds in Hour</label><input id="secondsInHour" type="number" value="3600" step="1" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500"></div>
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">Seconds in Day</label><input id="secondsInDay" type="number" value="86400" step="1" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500"></div>
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">Days in Month</label><input id="daysInMonth" type="number" value="31" step="1" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500"></div>
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">Power Generation per Lux (mW/cm²/lux)</label><input id="powerGenerationPerLux" type="number" value="0.00003" step="0.00001" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500"></div>
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">Cell Degradation per Month (%)</label><input id="cellDegradationPerMonth" type="number" value="0.185780" step="0.000001" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500"></div>
       </div>
-      <div class="mt-4 flex justify-end">
-        <button id="applyConstants" class="px-4 py-2 bg-blue-600 text-white rounded-md">Apply</button>
+    </div>
+  </div>
+
+  <!-- Prices Modal -->
+  <div id="pricesModal" class="modal items-center justify-center p-4">
+    <div class="bg-white w-full max-w-4xl max-h-[85vh] overflow-y-auto rounded-xl p-6">
+      <div class="flex justify-between items-center mb-4 pb-3 border-b">
+        <h3 class="text-xl font-bold text-gray-800">Prices (Editable)</h3>
+        <button id="pricesClose" class="text-3xl font-bold text-gray-400 hover:text-gray-600 leading-none">&times;</button>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- CHANGED: slider + live value -->
+        <div class="flex flex-col gap-2">
+          <label class="text-sm font-medium text-gray-700">Module price (USD per cm² active)</label>
+          <div class="flex items-center gap-3">
+            <input id="priceModulePerCm2Range" type="range" class="slider env-slider flex-1" min="0.007" max="0.8" step="0.001">
+            <div class="w-28 text-right font-semibold"><span id="priceModulePerCm2Value">0.040</span> $/cm²</div>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">PMIC Full (USD each)</label><input id="pricePMICFull" type="number" step="0.01" value="1.0" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"></div>
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">PMIC Discrete (USD each)</label><input id="pricePMICDiscrete" type="number" step="0.01" value="0.4" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"></div>
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">PMIC Direct (USD each)</label><input id="pricePMICDirect" type="number" step="0.01" value="0" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"></div>
+
+        <!-- Storage (USD per Wh) — MULTIPLIED ×100 defaults -->
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">CR (USD/Wh)</label><input id="priceCR" type="number" step="0.1" value="45.0" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"></div>
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">LiPo (USD/Wh)</label><input id="priceLiPo" type="number" step="0.1" value="130.0" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"></div>
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">LiFePO (USD/Wh)</label><input id="priceLiFePO" type="number" step="0.1" value="90.0" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"></div>
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">LTO (USD/Wh)</label><input id="priceLTO" type="number" step="0.1" value="32.0" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"></div>
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">NiMH (USD/Wh)</label><input id="priceNiMH" type="number" step="0.1" value="140.0" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"></div>
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">Supercap (USD/Wh)</label><input id="priceSupercap" type="number" step="1" value="1900.0" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"></div>
+        <div class="flex flex-col gap-2"><label class="text-sm font-medium text-gray-700">Hybridcap (USD/Wh)</label><input id="priceHybridcap" type="number" step="1" value="1500.0" class="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"></div>
+      </div>
+
+      <div class="flex gap-3 mt-6">
+        <button id="pricesReset" class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300">Reset</button>
+        <button id="pricesApply" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white">Apply & Recalculate</button>
       </div>
     </div>
   </div>
 
   <!-- Calculated Values Modal -->
-  <div id="modalCalcs" class="modal items-center justify-center">
-    <div class="bg-white w-11/12 max-w-3xl rounded-2xl p-6">
-      <div class="flex items-center justify-between mb-4">
-        <h4 class="text-xl font-bold">Calculated Values</h4>
-        <button class="px-3 py-1 bg-gray-800 text-white rounded-md" id="closeCalcs">Close</button>
+  <div id="calculatedModal" class="modal items-center justify-center p-4">
+    <div class="bg-white w-full max-w-4xl max-h-[85vh] overflow-y-auto rounded-xl p-6">
+      <div class="flex justify-between items-center mb-4 pb-3 border-b">
+        <h3 class="text-xl font-bold text-gray-800">Calculated Values</h3>
+        <button id="calculatedClose" class="text-3xl font-bold text-gray-400 hover:text-gray-600 leading-none">&times;</button>
       </div>
-      <div id="calcGrid" class="grid sm:grid-cols-2 gap-3 text-sm"></div>
-    </div>
-  </div>
-
-  <!-- Prices Modal -->
-  <div id="modalPrices" class="modal items-center justify-center">
-    <div class="bg-white w-11/12 max-w-3xl rounded-2xl p-6">
-      <div class="flex items-center justify-between mb-4">
-        <h4 class="text-xl font-bold">Prices</h4>
-        <button class="px-3 py-1 bg-gray-800 text-white rounded-md" id="closePrices">Close</button>
-      </div>
-      <div class="grid sm:grid-cols-2 gap-6">
-        <div class="flex flex-col gap-2">
-          <label class="text-sm font-medium text-gray-700">Module price (USD per cm² active)</label>
-          <div class="flex items-center gap-3">
-            <input id="priceModulePerCm2Range" type="range" min="0.007" max="0.8" step="0.001" class="slider fillable env-fill flex-1">
-            <div class="w-28 text-right font-semibold"><span id="priceModulePerCm2Value">0.040</span> $/cm²</div>
-          </div>
-        </div>
-
-        <div class="flex flex-col gap-2">
-          <label class="text-sm font-medium text-gray-700">PMIC price</label>
-          <div class="space-y-2">
-            <div class="flex items-center justify-between gap-2"><span>Full PMIC</span><input id="p_pmic" type="number" step="0.01" class="w-28 px-2 py-1 border rounded-md" value="1.00"></div>
-            <div class="flex items-center justify-between gap-2"><span>Discrete</span><input id="p_disc" type="number" step="0.01" class="w-28 px-2 py-1 border rounded-md" value="0.40"></div>
-            <div class="flex items-center justify-between gap-2"><span>Direct-to-MCU</span><input id="p_dir" type="number" step="0.01" class="w-28 px-2 py-1 border rounded-md" value="0.00"></div>
-          </div>
-        </div>
-
-        <div class="sm:col-span-2">
-          <label class="text-sm font-medium text-gray-700">Energy storage prices (USD per Wh)</label>
-          <div class="grid sm:grid-cols-3 gap-3 mt-2">
-            <div class="flex items-center justify-between gap-2"><span>CR</span><input id="s_CR" type="number" step="0.1" class="w-28 px-2 py-1 border rounded-md" value="45.0"></div>
-            <div class="flex items-center justify-between gap-2"><span>LiPo</span><input id="s_LiPo" type="number" step="0.1" class="w-28 px-2 py-1 border rounded-md" value="130.0"></div>
-            <div class="flex items-center justify-between gap-2"><span>LiFePO</span><input id="s_LiFePO" type="number" step="0.1" class="w-28 px-2 py-1 border rounded-md" value="90.0"></div>
-            <div class="flex items-center justify-between gap-2"><span>LTO</span><input id="s_LTO" type="number" step="0.1" class="w-28 px-2 py-1 border rounded-md" value="32.0"></div>
-            <div class="flex items-center justify-between gap-2"><span>NiMH</span><input id="s_NiMH" type="number" step="0.1" class="w-28 px-2 py-1 border rounded-md" value="140.0"></div>
-            <div class="flex items-center justify-between gap-2"><span>Supercap</span><input id="s_Supercap" type="number" step="1" class="w-28 px-2 py-1 border rounded-md" value="1900.0"></div>
-            <div class="flex items-center justify-between gap-2"><span>Hybridcap</span><input id="s_Hybridcap" type="number" step="1" class="w-28 px-2 py-1 border rounded-md" value="1500.0"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="mt-5 flex items-center justify-end gap-3">
-        <button id="resetPrices" class="px-3 py-2 rounded-md border">Reset</button>
-        <button id="applyPrices" class="px-4 py-2 rounded-md bg-emerald-600 text-white">Apply & Recalculate</button>
-      </div>
+      <div id="calculatedGrid" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
     </div>
   </div>
 
 <script>
-/* ---------- Helpers ---------- */
-const byId = (id)=>document.getElementById(id);
-function setFillTrack(el){
-  const min = +el.min, max = +el.max, val = +el.value;
-  const pct = ((val - min) * 100) / (max - min);
-  el.style.setProperty('--val', pct + '%');
-}
-function linkRangeNumber(rId, nId, on){
-  const r=byId(rId), n=byId(nId);
-  const syncFromR=()=>{ n.value = r.value; setFillTrack(r); on&&on(); };
-  const syncFromN=()=>{ let v=parseFloat(n.value); if(isNaN(v)) v=+r.value;
-    v=Math.min(+r.max, Math.max(+r.min, v)); r.value=v; setFillTrack(r); on&&on(); };
-  r.addEventListener('input', syncFromR);
-  n.addEventListener('input', syncFromN);
-  setFillTrack(r);
-}
+window.addEventListener('DOMContentLoaded', () => {
+  const byId = (id)=>document.getElementById(id);
+  const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 
-/* ---------- Defaults & Constants ---------- */
-let C = {
-  secondsInHour: 3600,
-  secondsInDay: 86400,
-  daysInMonth: 31,
-  powerGenerationPerLux: 0.00003, // mW/cm^2 per lux
-  cellDegradationPerMonth: 0.185780 // %
-};
+  // Constants (editable in modal)
+  let constants = {
+    darknessPeriod:3,
+    secondsInHour:3600,
+    secondsInDay:86400,
+    daysInMonth:31,
+    powerGenerationPerLux:0.00003,
+    cellDegradationPerMonth:0.185780
+  };
 
-const storageDischarge = {
-  CR: { annual: 1.5 },
-  LiPo: { monthly: 2.5 },
-  LiFePO: { monthly: 1.5 },
-  LTO: { monthly: 3.0 },
-  NiMH: { monthly: 1.5 },
-  Supercap: { monthly: 20.0 },
-  Hybridcap: { monthly: 20.0 }
-};
-const pmEff = { PMIC: 90, Discrete: 75, Direct: 50 };
+  // Pricing (editable in Prices modal)
+  // CHANGED: storagePerWh defaults ×100; module default set to a sensible within-range value
+  const defaultPrices = {
+    modulePerCm2: 0.04, // USD/cm² (within slider range 0.007–0.8)
+    pmic: { PMIC:1.0, Discrete:0.4, Direct:0 },
+    storagePerWh: {
+      CR:45.0, LiPo:130.0, LiFePO:90.0, LTO:32.0, NiMH:140.0, Supercap:1900.0, Hybridcap:1500.0
+    }
+  };
+  let prices = JSON.parse(JSON.stringify(defaultPrices));
 
-const defaultPrices = {
-  modulePerCm2: 0.04, // USD/cm²
-  pmic: { PMIC: 1.0, Discrete: 0.4, Direct: 0.0 },
-  storagePerWh: {
-    CR: 45.0, LiPo: 130.0, LiFePO: 90.0, LTO: 32.0, NiMH: 140.0, Supercap: 1900.0, Hybridcap: 1500.0
+  const storageDischarge = {
+    CR:{ annual:1.5 }, LiPo:{ monthly:2.5 }, LiFePO:{ monthly:1.5 },
+    LTO:{ monthly:3.0 }, NiMH:{ monthly:1.5 }, Supercap:{ monthly:20.0 }, Hybridcap:{ monthly:20.0 }
+  };
+  const pmEfficiencies = { PMIC:90, Discrete:75, Direct:50 };
+
+  // Slider filled track (for main sliders)
+  function colorFill(el, color){
+    if(!el) return;
+    const paint=()=>{
+      const min=+el.min||0, max=+el.max||100, val=+el.value||0;
+      const p=((val-min)/(max-min))*100;
+      el.style.background=`linear-gradient(90deg, ${color} 0%, ${color} ${p}%, var(--track) ${p}%, var(--track) 100%)`;
+    };
+    el.addEventListener('input', paint); paint();
   }
-};
-let prices = JSON.parse(JSON.stringify(defaultPrices));
+  function link(sliderId, numId, color){
+    const s=byId(sliderId), n=byId(numId); if(!s||!n) return;
+    const fromS=()=>{ n.value=s.value; colorFill(s,color); calculate(); };
+    const fromN=()=>{ const v=parseFloat(n.value);
+      const min=parseFloat(s.min), max=parseFloat(s.max);
+      if(!isNaN(v) && v>=min && v<=max) s.value=v;
+      colorFill(s,color); calculate();
+    };
+    s.addEventListener('input', fromS);
+    n.addEventListener('input', fromN);
+    colorFill(s,color);
+  }
 
-/* ---------- Link inputs ---------- */
-linkRangeNumber('v','vNum',calculate);
-linkRangeNumber('T','TNum',calculate);
-linkRangeNumber('Is','IsNum',calculate);
-linkRangeNumber('tp','tpNum',calculate);
-linkRangeNumber('Ip','IpNum',calculate);
-linkRangeNumber('lux','luxNum',calculate);
-linkRangeNumber('lday','ldayNum',calculate);
-linkRangeNumber('life','lifeNum',calculate);
-linkRangeNumber('dark','darkNum',calculate);
+  // Wire sliders
+  link('systemVoltage','systemVoltageNum','var(--sys)');
+  link('intervalBetweenPulses','intervalBetweenPulsesNum','var(--sys)');
+  link('sleepCurrent','sleepCurrentNum','var(--sys)');
+  link('pulseDuration','pulseDurationNum','var(--sys)');
+  link('pulseCurrent','pulseCurrentNum','var(--sys)');
+  link('lightIntensity','lightIntensityNum','var(--env)');
+  link('lightDuration','lightDurationNum','var(--env)');
+  link('deviceLifetime','deviceLifetimeNum','var(--env)');
 
-['storageType','pmSol'].forEach(id=>byId(id).addEventListener('change',calculate));
+  // Dropdowns
+  byId('storageSelect').addEventListener('change', calculate);
+  byId('pmSelect').addEventListener('change', calculate);
 
-/* ---------- Module price slider UI ---------- */
-const priceRange = byId('priceModulePerCm2Range');
-const priceValue = byId('priceModulePerCm2Value');
-function syncPriceSliderUI(){
-  if(!priceRange||!priceValue) return;
-  priceValue.textContent = (+priceRange.value).toFixed(3);
-  setFillTrack(priceRange);
-}
-
-/* ---------- Gauges ---------- */
-function setCircularFill(circleId, value, max, noteId, overId){
-  const circle = byId(circleId);
-  const note = noteId ? byId(noteId) : null;
-  const over = overId ? byId(overId) : null;
-  const r = 70, CIRC = 2*Math.PI*r; // 439.8
-  const clamp = Math.max(0, Math.min(1, value/max));
-  const dash = CIRC * (1 - clamp);
-  circle.style.strokeDashoffset = dash;
-
-  if (over){
-    if (value > max){
-      const extraRatio = Math.min(1, (value - max) / max);
-      const r2=60, C2=2*Math.PI*r2; // inner overflow ring
-      over.style.opacity = "1";
-      over.setAttribute('stroke-dashoffset', String(C2 * (1 - extraRatio)));
-    } else {
-      over.style.opacity = "0";
-      over.setAttribute('stroke-dashoffset', String(2*Math.PI*60));
+  // Gauges with overflow rings
+  function updateGauge({gaugeId, overflowId, value, maxValue}){
+    const main = byId(gaugeId), over = byId(overflowId);
+    if(!main) return;
+    const rMain=70, cMain=2*Math.PI*rMain;
+    const frac=value/maxValue;
+    const clamped=Math.max(0,Math.min(1,frac));
+    main.style.strokeDashoffset = (cMain - clamped*cMain);
+    if(over){
+      const rOver=58, cOver=2*Math.PI*rOver;
+      const overflow=Math.max(0,frac-1);
+      over.classList.toggle('opacity-0', overflow<=0);
+      const overClamped=Math.min(1,overflow);
+      over.style.strokeDasharray=cOver;
+      over.style.strokeDashoffset=(cOver - overClamped*cOver);
     }
   }
-  if (note) note.textContent = value>max ? 'overflow' : '';
-}
 
-/* ---------- PV Preview (real-ish size with cap) ---------- */
-const screenDPI = (()=>{const d=document.createElement('div'); d.style.width='1in'; d.style.height='1in'; d.style.position='absolute'; d.style.left='-100%'; document.body.appendChild(d); const dpi=d.offsetWidth; d.remove(); return dpi||96;})();
-const pxPerCm = screenDPI/2.54;
+  // COST pie (3 segments)
+  function updateCostPie(cModule, cPMIC, cStore){
+    const total = Math.max(0, (cModule||0)+(cPMIC||0)+(cStore||0));
+    const C = 2*Math.PI*80; // r=80, matches SVG
+    const seg = (v)=> (total>0 ? (v/total)*C : 0);
 
-function updatePVPreview(side_cm){
-  const active = byId('pvActive');
-  const foot = byId('pvFoot');
-  const lTopIn = byId('labelTopIn');
-  const lLeftIn= byId('labelLeftIn');
-  const lRF = byId('labelRightFoot');
-  const lBF = byId('labelBottomFoot');
+    const s1 = seg(cModule);
+    const s2 = seg(cPMIC);
+    const s3 = seg(cStore);
 
-  if(!active||!foot) return;
+    byId('costSegModule').style.strokeDasharray = `${s1} ${C - s1}`;
+    byId('costSegModule').style.strokeDashoffset = `0`;
 
-  // size caps for display
-  let px = Math.max(18, side_cm * pxPerCm);
-  const maxPx = 180;
-  let scaled = false;
-  if(px > maxPx){ px = maxPx; scaled = true; }
+    byId('costSegPMIC').style.strokeDasharray = `${s2} ${C - s2}`;
+    byId('costSegPMIC').style.strokeDashoffset = `${-s1}`;
 
-  active.style.width = px+'px';
-  active.style.height= px+'px';
-
-  // 6.5mm = 0.65 cm offset outward on each side => +1.3 cm on side
-  const footSide_cm = side_cm + 1.3;
-  let footPx = Math.max(18, footSide_cm * pxPerCm);
-  if(footPx > maxPx + (1.3*pxPerCm)){ footPx = maxPx + (1.3*pxPerCm); }
-  const off = (footPx - px)/2;
-
-  foot.style.left = (-off)+'px';
-  foot.style.top  = (-off)+'px';
-  foot.style.width = footPx+'px';
-  foot.style.height= footPx+'px';
-
-  // Inner labels (active)
-  const activeLabel = (scaled? side_cm.toFixed(2)+' cm (scaled)' : side_cm.toFixed(2)+' cm');
-  lTopIn.textContent = activeLabel;
-  lLeftIn.textContent= activeLabel;
-
-  // Position inner labels
-  lTopIn.style.top = '4px';
-  lLeftIn.style.left='4px';
-
-  // Footprint labels: right & bottom (footprint side)
-  const footLabel = (footSide_cm).toFixed(2)+' cm';
-  // right
-  lRF.textContent = footLabel;
-  lRF.style.left = (footPx + 6) + 'px';
-  lRF.style.top  = (footPx/2 - 8) + 'px';
-  // bottom
-  lBF.textContent = footLabel;
-  lBF.style.top  = (footPx + 6) + 'px';
-  lBF.style.left = (footPx/2 - 24) + 'px';
-}
-
-/* ---------- Cost Pie ---------- */
-function setCostPie(moduleCost, pmicCost, storageCost){
-  const total = Math.max(0.00001, moduleCost + pmicCost + storageCost);
-  const CIRC = 439.8;
-
-  const m = moduleCost/total, p = pmicCost/total, s = storageCost/total;
-
-  const segM = byId('segModule');
-  const segP = byId('segPMIC');
-  const segS = byId('segStorage');
-
-  // dasharray = [filled, remaining]; dashoffset sets rotation
-  segM.setAttribute('stroke-dasharray', `${CIRC*m} ${CIRC*(1-m)}`);
-  segM.style.strokeDashoffset = 0;
-
-  const offP = CIRC*(1-m);
-  segP.setAttribute('stroke-dasharray', `${CIRC*p} ${CIRC*(1-p)}`);
-  segP.style.strokeDashoffset = offP;
-
-  const offS = CIRC*(1-m-p);
-  segS.setAttribute('stroke-dasharray', `${CIRC*s} ${CIRC*(1-s)}`);
-  segS.style.strokeDashoffset = offS;
-
-  byId('CostModule').textContent = `$${moduleCost.toFixed(2)}`;
-  byId('CostPMIC').textContent   = `$${pmicCost.toFixed(2)}`;
-  byId('CostStorage').textContent= `$${storageCost.toFixed(2)}`;
-  byId('CostTotal').textContent  = `$${total.toFixed(2)}`;
-}
-
-/* ---------- Calculation ---------- */
-function calculate(){
-  // Inputs
-  const V = +byId('vNum').value;
-  const T = +byId('TNum').value;
-  const Is_nA = +byId('IsNum').value;
-  const tp_ms = +byId('tpNum').value;
-  const Ip_mA = +byId('IpNum').value;
-  const lux = +byId('luxNum').value;
-  const lmin = +byId('ldayNum').value;
-  const lifeMonths = +byId('lifeNum').value;
-  const darkness = +byId('darkNum').value;
-  const storageType = byId('storageType').value;
-  const pm = byId('pmSol').value;
-
-  // Derived
-  const tp_s = tp_ms/1000;
-  const PulsesPerDay = C.secondsInDay / T;
-
-  const Ppulse_mW = V * Ip_mA;
-  const Psleep_mW = V * (Is_nA/1e6);
-
-  const Epulse_mWh = (Ppulse_mW * tp_s)/C.secondsInHour;
-  const EsleepInt_mWh = Psleep_mW * Math.max(T - tp_s, 0)/C.secondsInHour;
-  const PulseDay_mWh = Epulse_mWh * PulsesPerDay;
-  const SleepDay_mWh = EsleepInt_mWh * PulsesPerDay;
-  const Eday_mWh = PulseDay_mWh + SleepDay_mWh;
-
-  // Dark period & storage
-  const E_dark_mWh = Eday_mWh * C.daysInMonth * darkness;
-  const E_min_mWh = E_dark_mWh + Eday_mWh;
-
-  let SdMonthly;
-  if (storageType==='CR'){ SdMonthly = 100*(1 - Math.pow(1 - storageDischarge.CR.annual/100, 1/12)); }
-  else { SdMonthly = storageDischarge[storageType].monthly; }
-
-  const r = SdMonthly/100;
-  const remain = Math.pow(1 - r, darkness);
-  const Eloss_mWh = E_min_mWh * (1 - remain);
-  const EstorTot_mWh = E_min_mWh + Eloss_mWh;
-
-  // LEH harvesting at EOL
-  const pristine_mWcm2 = lux * C.powerGenerationPerLux;
-  const degr_mWcm2 = pristine_mWcm2 * (C.cellDegradationPerMonth/100) * lifeMonths;
-  const EOL_mWcm2 = Math.max(0, pristine_mWcm2 - degr_mWcm2);
-  const harvest_mWh_cm2_day = EOL_mWcm2 * (lmin/60);
-
-  const eff = Math.max(0, Math.min(1, pmEff[pm]/100));
-
-  // Required area to cover daily consumption at EOL
-  let Area_cm2 = Infinity, Side_cm = Infinity;
-  const denom = harvest_mWh_cm2_day * eff;
-  if (denom > 0){
-    Area_cm2 = Eday_mWh / denom;
-    Side_cm = Math.sqrt(Area_cm2);
+    byId('costSegStore').style.strokeDasharray = `${s3} ${C - s3}`;
+    byId('costSegStore').style.strokeDashoffset = `${-(s1+s2)}`;
   }
 
-  // LEH energy generated stats from the sized area
-  const PV_day = (Area_cm2===Infinity) ? 0 : Area_cm2 * harvest_mWh_cm2_day;
-  const PM_day = PV_day * eff;
-  const PV_month = PV_day * C.daysInMonth;
-  const PM_month = PM_day * C.daysInMonth;
-  const PV_life = PV_month * lifeMonths;
-  const PM_life = PM_month * lifeMonths;
+  // DPI & PV preview
+  function dpi(){ const el=document.createElement('div'); el.style.width='1in'; el.style.height='1in'; el.style.position='absolute'; el.style.left='-100%'; el.style.top='-100%'; document.body.appendChild(el); const d=el.offsetWidth; el.remove(); return d||96; }
+  const pxPerCm = dpi()/2.54;
 
-  // Update UI: Daily & Storage gauges with overflow
-  byId('Eday').textContent = Eday_mWh.toFixed(3);
-  byId('PulseDay').textContent = PulseDay_mWh.toFixed(3);
-  byId('SleepDay').textContent = SleepDay_mWh.toFixed(3);
-  setCircularFill('dailyFill', Eday_mWh, 6, 'dailyNote', 'dailyOver'); // max 6 mWh
+  function updatePVPreview(sideCm){
+    const pvSquare=byId('pvSquare'), pvFrame=byId('pvFrame');
+    const labelTop=byId('pvLabelTop'), labelLeft=byId('pvLabelLeft');
+    const rightLab=byId('pvFrameLabelRight'), bottomLab=byId('pvFrameLabelBottom');
+    if(!pvSquare||!pvFrame) return;
 
-  byId('StorTot').textContent = EstorTot_mWh.toFixed(3);
-  byId('DarkE').textContent = E_dark_mWh.toFixed(3);
-  byId('MinStor').textContent = E_min_mWh.toFixed(3);
-  byId('SdPct').textContent = SdMonthly.toFixed(1);
-  setCircularFill('storFill', EstorTot_mWh, 40, 'storNote', 'storOver'); // max 40 mWh
+    if(!isFinite(sideCm)){
+      pvFrame.style.width='140px'; pvFrame.style.height='140px'; pvFrame.style.left='0'; pvFrame.style.top='0';
+      pvSquare.style.width='100px'; pvSquare.style.height='100px'; pvSquare.style.left='20px'; pvSquare.style.top='20px';
+      labelTop.textContent='∞ cm'; labelLeft.textContent='∞ cm';
+      rightLab.textContent='∞ cm footprint'; rightLab.style.left='146px'; rightLab.style.top='70px';
+      bottomLab.textContent='∞ cm footprint'; bottomLab.style.left='70px'; bottomLab.style.top='146px'; bottomLab.style.transform='translate(-50%,0)';
+      return;
+    }
+    const off=0.65; // 6.5 mm
+    const footSide=sideCm + 2*off;
+    const sizePx=sideCm*pxPerCm, framePx=footSide*pxPerCm;
+    const maxFrame=280, scale=framePx>maxFrame ? maxFrame/framePx : 1;
 
-  // LEH energy section
-  byId('PVday').textContent   = PV_day.toFixed(3);
-  byId('PVmonth').textContent = PV_month.toFixed(3);
-  byId('PVlife').textContent  = PV_life.toFixed(3);
-  byId('PMday').textContent   = PM_day.toFixed(3);
-  byId('PMmonth').textContent = PM_month.toFixed(3);
-  byId('PMlife').textContent  = PM_life.toFixed(3);
+    pvFrame.style.width=`${framePx*scale}px`;
+    pvFrame.style.height=`${framePx*scale}px`;
+    pvFrame.style.left='0px'; pvFrame.style.top='0px';
 
-  // PV module stats and preview
-  byId('Area').textContent = (Area_cm2===Infinity?'∞':Area_cm2.toFixed(2));
-  byId('SideActive').textContent = (Side_cm===Infinity?'∞ cm':(Side_cm.toFixed(2)+' cm'));
-  byId('PMEff').textContent = (pmEff[pm]+'%');
-  if (isFinite(Side_cm)) updatePVPreview(Side_cm);
+    const offPx=off*pxPerCm*scale;
+    pvSquare.style.width=`${sizePx*scale}px`;
+    pvSquare.style.height=`${sizePx*scale}px`;
+    pvSquare.style.left=`${offPx}px`; pvSquare.style.top=`${offPx}px`;
 
-  const sideFoot_cm = isFinite(Side_cm) ? (Side_cm + 1.3) : Infinity;
-  byId('SideFoot').textContent = (isFinite(sideFoot_cm)? sideFoot_cm.toFixed(2)+' cm' : '∞');
+    // inside labels (active square)
+    labelTop.style.left = `${offPx + (sizePx*scale)/2}px`;
+    labelTop.style.top = `${offPx + 6}px`;
+    labelTop.style.transform='translate(-50%,0)';
+    labelTop.textContent = `${sideCm.toFixed(2)} cm${scale<1?' (scaled)':''}`;
 
-  // Costing
-  const costModule = isFinite(Area_cm2) ? prices.modulePerCm2 * Area_cm2 : 0;
-  const costPMIC = prices.pmic[pm] || 0;
-  const costStorage = (EstorTot_mWh/1000) * (prices.storagePerWh[storageType]||0); // mWh -> Wh
-  setCostPie(costModule, costPMIC, costStorage);
+    labelLeft.style.left = `${offPx + 6}px`;
+    labelLeft.style.top = `${offPx + (sizePx*scale)/2}px`;
+    labelLeft.style.transform='translate(0,-50%)';
+    labelLeft.textContent = `${sideCm.toFixed(2)} cm${scale<1?' (scaled)':''}`;
 
-  // Calculations modal data stash
-  window._calc = {
-    PulsesPerDay, Ppulse_mW, Psleep_mW, Epulse_mWh, EsleepInt_mWh,
-    PulseDay_mWh, SleepDay_mWh, Eday_mWh,
-    E_dark_mWh, E_min_mWh, SdMonthly, Eloss_mWh, EstorTot_mWh,
-    pristine_mWcm2, degr_mWcm2, EOL_mWcm2, harvest_mWh_cm2_day,
-    Area_cm2, Side_cm, eff: eff*100, PV_day, PM_day, PV_month, PM_month, PV_life, PM_life,
-    costModule, costPMIC, costStorage
-  };
-}
+    // footprint labels: right & bottom (no background fill)
+    rightLab.textContent = `${footSide.toFixed(2)} cm footprint`;
+    rightLab.style.left = `${framePx*scale + 6}px`;
+    rightLab.style.top = `${(framePx*scale)/2}px`;
+    rightLab.style.transform='translate(0,-50%)';
 
-/* ---------- Modals wiring ---------- */
-function openModal(el){ el.classList.add('open'); }
-function closeModal(el){ el.classList.remove('open'); }
+    bottomLab.textContent = `${footSide.toFixed(2)} cm footprint`;
+    bottomLab.style.left = `${(framePx*scale)/2}px`;
+    bottomLab.style.top = `${framePx*scale + 6}px`;
+    bottomLab.style.transform='translate(-50%,0)';
+  }
 
-byId('btnConstants').addEventListener('click', ()=>{
-  byId('c_sih').value = C.secondsInHour;
-  byId('c_sid').value = C.secondsInDay;
-  byId('c_dim').value = C.daysInMonth;
-  byId('c_plux').value= C.powerGenerationPerLux;
-  byId('c_deg').value = C.cellDegradationPerMonth;
-  openModal(byId('modalConstants'));
-});
-byId('closeConstants').addEventListener('click', ()=>closeModal(byId('modalConstants')));
-byId('applyConstants').addEventListener('click', ()=>{
-  C.secondsInHour = +byId('c_sih').value||C.secondsInHour;
-  C.secondsInDay  = +byId('c_sid').value||C.secondsInDay;
-  C.daysInMonth   = +byId('c_dim').value||C.daysInMonth;
-  C.powerGenerationPerLux = +byId('c_plux').value||C.powerGenerationPerLux;
-  C.cellDegradationPerMonth = +byId('c_deg').value||C.cellDegradationPerMonth;
-  closeModal(byId('modalConstants'));
+  // Calculation
+  function calculate(){
+    try{
+      const V  = clamp(+byId('systemVoltageNum').value||2.0, 1.4, 3.3);
+      const T  = clamp(+byId('intervalBetweenPulsesNum').value||600, 1, 3600);
+      const In = clamp(+byId('sleepCurrentNum').value||650, 0, 1000);
+      const tp = clamp(+byId('pulseDurationNum').value||5, 0.5, 50)/1000;
+      const Ip = clamp(+byId('pulseCurrentNum').value||11, 0.1, 30);
+      const Lx = clamp(+byId('lightIntensityNum').value||200, 1, 2000);
+      const Lm = clamp(+byId('lightDurationNum').value||60, 1, 1440);
+      const devLifeMonths = clamp(+byId('deviceLifetimeNum').value||36, 1, 120);
+
+      const storageType = byId('storageSelect').value;
+      const pmSolution  = byId('pmSelect').value;
+
+      const PulsesPerDay = constants.secondsInDay / T;
+      const PowerPerPulse_mW = V * Ip;
+      const PowerDuringSleep_mW = V * (In/1e6);
+      const EnergyPerPulse_mWh = (PowerPerPulse_mW * tp) / constants.secondsInHour;
+      const EnergyPerSleepInterval_mWh = PowerDuringSleep_mW * Math.max(T - tp, 0) / constants.secondsInHour;
+      const PulseEnergyPerDay_mWh = EnergyPerPulse_mWh * PulsesPerDay;
+      const SleepEnergyPerDay_mWh = EnergyPerSleepInterval_mWh * PulsesPerDay;
+      const EnergyPerDay_mWh = PulseEnergyPerDay_mWh + SleepEnergyPerDay_mWh;
+
+      const EnergyDarkness_mWh = EnergyPerDay_mWh * constants.daysInMonth * constants.darknessPeriod;
+      const MinStorage_mWh = EnergyDarkness_mWh + EnergyPerDay_mWh;
+
+      // Self-discharge
+      let MonthlySelfDischargePct;
+      if (storageType==='CR'){
+        MonthlySelfDischargePct = 100*(1 - Math.pow(1 - storageDischarge.CR.annual/100, 1/12));
+      } else {
+        MonthlySelfDischargePct = storageDischarge[storageType].monthly;
+      }
+      const r = MonthlySelfDischargePct/100;
+      const remain = Math.pow(1 - r, constants.darknessPeriod);
+      const EnergyLoss_mWh = MinStorage_mWh * (1 - remain);
+      const TotalStorage_mWh = MinStorage_mWh + EnergyLoss_mWh;
+
+      // LEH generation (EOL)
+      const LEH_pristine_mWcm2 = Lx * constants.powerGenerationPerLux;
+      const LEH_degradation_mWcm2 = LEH_pristine_mWcm2 * (constants.cellDegradationPerMonth/100) * devLifeMonths;
+      const LEH_EOL_mWcm2 = Math.max(0, LEH_pristine_mWcm2 - LEH_degradation_mWcm2);
+      const Harvest_EOL_mWh_cm2_day = LEH_EOL_mWcm2 * (Lm/60);
+
+      const eff = Math.max(0, Math.min(1, (pmEfficiencies[pmSolution]||90)/100));
+      const denom = Harvest_EOL_mWh_cm2_day * eff;
+      const Area_cm2 = denom>0 ? (EnergyPerDay_mWh/denom) : Infinity;
+      const Side_cm  = isFinite(Area_cm2) ? Math.sqrt(Area_cm2) : Infinity;
+
+      const LEH_Power_mW = isFinite(Area_cm2) ? (LEH_EOL_mWcm2 * Area_cm2) : Infinity;
+      const LEH_Eday_mWh = isFinite(Area_cm2) ? (Harvest_EOL_mWh_cm2_day * Area_cm2) : Infinity;
+      const LEH_Emonth_mWh = isFinite(LEH_Eday_mWh) ? (LEH_Eday_mWh * constants.daysInMonth) : Infinity;
+      const LEH_Elife_Wh = isFinite(LEH_Emonth_mWh) ? ((LEH_Emonth_mWh * devLifeMonths)/1000) : Infinity;
+
+      const LEH_Power_mW_pm = isFinite(LEH_Power_mW) ? LEH_Power_mW*eff : Infinity;
+      const LEH_Eday_mWh_pm = isFinite(LEH_Eday_mWh) ? LEH_Eday_mWh*eff : Infinity;
+      const LEH_Emonth_mWh_pm = isFinite(LEH_Emonth_mWh) ? LEH_Emonth_mWh*eff : Infinity;
+      const LEH_Elife_Wh_pm = isFinite(LEH_Elife_Wh) ? LEH_Elife_Wh*eff : Infinity;
+
+      // Update UI
+      byId('dailyEnergy').textContent = EnergyPerDay_mWh.toFixed(3);
+      byId('pulseEnergy').textContent = PulseEnergyPerDay_mWh.toFixed(3);
+      byId('sleepEnergy').textContent = SleepEnergyPerDay_mWh.toFixed(3);
+
+      byId('totalStorage').textContent = TotalStorage_mWh.toFixed(3);
+      byId('darkPeriodEnergy').textContent = EnergyDarkness_mWh.toFixed(3);
+      byId('minStorage').textContent = MinStorage_mWh.toFixed(3);
+      byId('selfDischarge').textContent = MonthlySelfDischargePct.toFixed(1);
+
+      byId('pvArea').textContent = isFinite(Area_cm2)? Area_cm2.toFixed(2):'∞';
+      byId('pvSideActive').textContent = isFinite(Side_cm)? Side_cm.toFixed(2):'∞';
+      const footSide = isFinite(Side_cm)? (Side_cm + 2*0.65): Infinity;
+      byId('pvSideFootprint').textContent = isFinite(footSide)? footSide.toFixed(2):'∞';
+      byId('pmEfficiency').textContent = Math.round(eff*100);
+
+      byId('lehPower_mW').textContent = isFinite(LEH_Power_mW)? LEH_Power_mW.toFixed(3):'∞';
+      byId('lehEnergyDay_mWh').textContent = isFinite(LEH_Eday_mWh)? LEH_Eday_mWh.toFixed(3):'∞';
+      byId('lehEnergyMonth_mWh').textContent = isFinite(LEH_Emonth_mWh)? LEH_Emonth_mWh.toFixed(3):'∞';
+      byId('lehEnergyLife_Wh').textContent = isFinite(LEH_Elife_Wh)? LEH_Elife_Wh.toFixed(3):'∞';
+
+      ['lehPmEffLabel1','lehPmEffLabel2','lehPmEffLabel3','lehPmEffLabel4']
+        .forEach(id=>{ const el=byId(id); if(el) el.textContent = Math.round(eff*100); });
+
+      byId('lehPower_mW_pm').textContent = isFinite(LEH_Power_mW_pm)? LEH_Power_mW_pm.toFixed(3):'∞';
+      byId('lehEnergyDay_mWh_pm').textContent = isFinite(LEH_Eday_mWh_pm)? LEH_Eday_mWh_pm.toFixed(3):'∞';
+      byId('lehEnergyMonth_mWh_pm').textContent = isFinite(LEH_Emonth_mWh_pm)? LEH_Emonth_mWh_pm.toFixed(3):'∞';
+      byId('lehEnergyLife_Wh_pm').textContent = isFinite(LEH_Elife_Wh_pm)? LEH_Elife_Wh_pm.toFixed(3):'∞';
+
+      // Gauges: caps 6 and 40; overflow ring shows extra
+      updateGauge({gaugeId:'dailyEnergyGauge', overflowId:'dailyOverflow', value:EnergyPerDay_mWh, maxValue:6});
+      updateGauge({gaugeId:'storageGauge', overflowId:'storageOverflow', value:TotalStorage_mWh, maxValue:40});
+
+      updatePVPreview(Side_cm);
+
+      // ---- COSTS ----
+      const costModule = isFinite(Area_cm2) ? (Area_cm2 * prices.modulePerCm2) : 0;
+      const costPMIC   = prices.pmic[pmSolution] ?? 0;
+      const perWh      = prices.storagePerWh[storageType] ?? 0;
+      const costStore  = (TotalStorage_mWh/1000) * perWh; // mWh -> Wh
+      const costTotal  = (costModule + costPMIC + costStore);
+
+      byId('costModule').textContent = `$${costModule.toFixed(2)}`;
+      byId('costPMIC').textContent   = `$${costPMIC.toFixed(2)}`;
+      byId('costStorage').textContent= `$${costStore.toFixed(2)}`;
+      byId('costTotal').textContent  = `$${costTotal.toFixed(2)}`;
+      updateCostPie(costModule, costPMIC, costStore);
+
+      // stash for modal
+      window.calculatedValues = {
+        PulsesPerDay, PowerPerPulse_mW, PowerDuringSleep_mW,
+        EnergyPerPulse_mWh, EnergyPerSleepInterval_mWh,
+        PulseEnergyPerDay_mWh, SleepEnergyPerDay_mWh, EnergyPerDay_mWh,
+        EnergyDarkness_mWh, MinStorage_mWh, MonthlySelfDischargePct, EnergyLoss_mWh, TotalStorage_mWh,
+        LEH_pristine_mWcm2, LEH_degradation_mWcm2, LEH_EOL_mWcm2, Harvest_EOL_mWh_cm2_day,
+        Area_cm2, Side_cm, PMEfficiency: Math.round(eff*100),
+        costModule, costPMIC, costStore, costTotal
+      };
+    }catch(e){ console.error(e); }
+  }
+
+  function updateCalculatedModal(){
+    const g=byId('calculatedGrid'); const v=window.calculatedValues||{};
+    const items = [
+      ['Pulses Per Day', v.PulsesPerDay,'pulses'],
+      ['Power Per Pulse', v.PowerPerPulse_mW,'mW'],
+      ['Power During Sleep', v.PowerDuringSleep_mW,'mW'],
+      ['Energy Per Pulse', v.EnergyPerPulse_mWh,'mWh'],
+      ['Energy Per Sleep Interval', v.EnergyPerSleepInterval_mWh,'mWh'],
+      ['Pulse Energy Per Day', v.PulseEnergyPerDay_mWh,'mWh'],
+      ['Sleep Energy Per Day', v.SleepEnergyPerDay_mWh,'mWh'],
+      ['Total Energy Per Day', v.EnergyPerDay_mWh,'mWh'],
+      ['Energy During Darkness', v.EnergyDarkness_mWh,'mWh'],
+      ['Minimum Storage', v.MinStorage_mWh,'mWh'],
+      ['Monthly Self-Discharge', v.MonthlySelfDischargePct,'%'],
+      ['Energy Loss (Self-discharge)', v.EnergyLoss_mWh,'mWh'],
+      ['Total Storage Required', v.TotalStorage_mWh,'mWh'],
+      ['LEH Pristine Power', v.LEH_pristine_mWcm2,'mW/cm²'],
+      ['LEH Degradation', v.LEH_degradation_mWcm2,'mW/cm²'],
+      ['LEH EOL Power', v.LEH_EOL_mWcm2,'mW/cm²'],
+      ['Harvest EOL / Day', v.Harvest_EOL_mWh_cm2_day,'mWh/cm²/day'],
+      ['Required Area', v.Area_cm2,'cm²'],
+      ['Square Side (active)', v.Side_cm,'cm'],
+      ['PM Efficiency', v.PMEfficiency,'%'],
+      ['Cost: Module', v.costModule,'USD'],
+      ['Cost: PMIC', v.costPMIC,'USD'],
+      ['Cost: Storage', v.costStore,'USD'],
+      ['Cost: Total', v.costTotal,'USD']
+    ];
+    g.innerHTML = items.map(([label,val,unit])=>`
+      <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-200">
+        <span class="font-medium text-gray-700">${label}</span>
+        <span class="font-semibold text-gray-800">${(typeof val==='number' && isFinite(val))? val.toFixed(6): (val===Infinity?'∞':'—')} ${unit}</span>
+      </div>`).join('');
+  }
+
+  // Buttons / Modals
+  const constantsModal = byId('constantsModal');
+  const calculatedModal = byId('calculatedModal');
+  const pricesModal = byId('pricesModal');
+
+  byId('constantsBtn').addEventListener('click', ()=>{
+    Object.keys(constants).forEach(k=>{ const el=byId(k); if(el) el.value = constants[k]; });
+    constantsModal.classList.add('show');
+  });
+  byId('calculatedBtn').addEventListener('click', ()=>{
+    updateCalculatedModal();
+    calculatedModal.classList.add('show');
+  });
+  byId('pricesBtn').addEventListener('click', ()=>{
+    // populate prices
+    byId('priceModulePerCm2Range').value = prices.modulePerCm2;
+    byId('priceModulePerCm2Value').textContent = (+prices.modulePerCm2).toFixed(3);
+    byId('pricePMICFull').value = prices.pmic.PMIC;
+    byId('pricePMICDiscrete').value = prices.pmic.Discrete;
+    byId('pricePMICDirect').value = prices.pmic.Direct;
+    byId('priceCR').value = prices.storagePerWh.CR;
+    byId('priceLiPo').value = prices.storagePerWh.LiPo;
+    byId('priceLiFePO').value = prices.storagePerWh.LiFePO;
+    byId('priceLTO').value = prices.storagePerWh.LTO;
+    byId('priceNiMH').value = prices.storagePerWh.NiMH;
+    byId('priceSupercap').value = prices.storagePerWh.Supercap;
+    byId('priceHybridcap').value = prices.storagePerWh.Hybridcap;
+    pricesModal.classList.add('show');
+  });
+
+  byId('constantsClose').addEventListener('click', ()=>{
+    Object.keys(constants).forEach(k=>{ const el=byId(k); if(el){ const num=parseFloat(el.value); if(!isNaN(num)) constants[k]=num; } });
+    constantsModal.classList.remove('show');
+    calculate();
+  });
+  byId('calculatedClose').addEventListener('click', ()=>calculatedModal.classList.remove('show'));
+
+  byId('pricesClose').addEventListener('click', ()=>pricesModal.classList.remove('show'));
+  byId('pricesReset').addEventListener('click', ()=>{
+    prices = JSON.parse(JSON.stringify(defaultPrices));
+    byId('priceModulePerCm2Range').value = prices.modulePerCm2;
+    byId('priceModulePerCm2Value').textContent = (+prices.modulePerCm2).toFixed(3);
+    byId('pricePMICFull').value = prices.pmic.PMIC;
+    byId('pricePMICDiscrete').value = prices.pmic.Discrete;
+    byId('pricePMICDirect').value = prices.pmic.Direct;
+    byId('priceCR').value = prices.storagePerWh.CR;
+    byId('priceLiPo').value = prices.storagePerWh.LiPo;
+    byId('priceLiFePO').value = prices.storagePerWh.LiFePO;
+    byId('priceLTO').value = prices.storagePerWh.LTO;
+    byId('priceNiMH').value = prices.storagePerWh.NiMH;
+    byId('priceSupercap').value = prices.storagePerWh.Supercap;
+    byId('priceHybridcap').value = prices.storagePerWh.Hybridcap;
+  });
+  byId('pricesApply').addEventListener('click', ()=>{
+    prices.modulePerCm2 = parseFloat(byId('priceModulePerCm2Range').value)||prices.modulePerCm2;
+    prices.pmic.PMIC = parseFloat(byId('pricePMICFull').value)||prices.pmic.PMIC;
+    prices.pmic.Discrete = parseFloat(byId('pricePMICDiscrete').value)||prices.pmic.Discrete;
+    prices.pmic.Direct = parseFloat(byId('pricePMICDirect').value)||prices.pmic.Direct;
+    prices.storagePerWh.CR = parseFloat(byId('priceCR').value)||prices.storagePerWh.CR;
+    prices.storagePerWh.LiPo = parseFloat(byId('priceLiPo').value)||prices.storagePerWh.LiPo;
+    prices.storagePerWh.LiFePO = parseFloat(byId('priceLiFePO').value)||prices.storagePerWh.LiFePO;
+    prices.storagePerWh.LTO = parseFloat(byId('priceLTO').value)||prices.storagePerWh.LTO;
+    prices.storagePerWh.NiMH = parseFloat(byId('priceNiMH').value)||prices.storagePerWh.NiMH;
+    prices.storagePerWh.Supercap = parseFloat(byId('priceSupercap').value)||prices.storagePerWh.Supercap;
+    prices.storagePerWh.Hybridcap = parseFloat(byId('priceHybridcap').value)||prices.storagePerWh.Hybridcap;
+    pricesModal.classList.remove('show');
+    calculate();
+  });
+
+  window.addEventListener('click',(e)=>{
+    if(e.target===constantsModal) byId('constantsClose').click();
+    if(e.target===calculatedModal) calculatedModal.classList.remove('show');
+    if(e.target===pricesModal) pricesModal.classList.remove('show');
+  });
+
+  // Reset
+  byId('resetBtn').addEventListener('click', ()=>{
+    const set=(id,v)=>{ const el=byId(id); if(el){ el.value=v; el.dispatchEvent(new Event('input')); } };
+    set('systemVoltage',2.0); set('systemVoltageNum',2.0);
+    set('intervalBetweenPulses',600); set('intervalBetweenPulsesNum',600);
+    set('sleepCurrent',650); set('sleepCurrentNum',650);
+    set('pulseDuration',5); set('pulseDurationNum',5);
+    set('pulseCurrent',11); set('pulseCurrentNum',11);
+    set('lightIntensity',200); set('lightIntensityNum',200);
+    set('lightDuration',60); set('lightDurationNum',60);
+    set('deviceLifetime',36); set('deviceLifetimeNum',36);
+    byId('storageSelect').value='LiPo';
+    byId('pmSelect').value='PMIC';
+    prices = JSON.parse(JSON.stringify(defaultPrices));
+    calculate();
+  });
+
+  // Initialize once
+  ['systemVoltage','intervalBetweenPulses','sleepCurrent','pulseDuration','pulseCurrent','lightIntensity','lightDuration','deviceLifetime']
+    .forEach(id=>{ const el=byId(id); if(el) el.dispatchEvent(new Event('input')); });
+
+  // Initialize module price slider UI fill and value
+  const modSlider = byId('priceModulePerCm2Range');
+  const modValue  = byId('priceModulePerCm2Value');
+  if(modSlider && modValue){
+    modSlider.value = prices.modulePerCm2;
+    modValue.textContent = (+prices.modulePerCm2).toFixed(3);
+    colorFill(modSlider,'var(--env)');
+    modSlider.addEventListener('input', ()=>{
+      modValue.textContent = (+modSlider.value).toFixed(3);
+      colorFill(modSlider,'var(--env)');
+    });
+  }
+
   calculate();
 });
-
-byId('btnCalcVals').addEventListener('click', ()=>{
-  const g = byId('calcGrid');
-  const v = window._calc||{};
-  const fmt=(x, d=6)=> (typeof x==='number' && isFinite(x)) ? x.toFixed(d) : '—';
-  g.innerHTML = `
-    <div class="p-2 bg-gray-50 rounded border flex justify-between"><span>Pulses/Day</span><span>${fmt(v.PulsesPerDay,3)}</span></div>
-    <div class="p-2 bg-gray-50 rounded border flex justify-between"><span>Power/Pulse (mW)</span><span>${fmt(v.Ppulse_mW,3)}</span></div>
-    <div class="p-2 bg-gray-50 rounded border flex justify-between"><span>Sleep Power (mW)</span><span>${fmt(v.Psleep_mW,6)}</span></div>
-    <div class="p-2 bg-gray-50 rounded border flex justify-between"><span>Energy/Pulse (mWh)</span><span>${fmt(v.Epulse_mWh,6)}</span></div>
-    <div class="p-2 bg-gray-50 rounded border flex justify-between"><span>Energy/Sleep-Interval (mWh)</span><span>${fmt(v.EsleepInt_mWh,6)}</span></div>
-    <div class="p-2 bg-gray-50 rounded border flex justify-between"><span>Pulse Energy/Day (mWh)</span><span>${fmt(v.PulseDay_mWh,6)}</span></div>
-    <div class="p-2 bg-gray-50 rounded border flex justify-between"><span>Sleep Energy/Day (mWh)</span><span>${fmt(v.SleepDay_mWh,6)}</span></div>
-    <div class="p-2 bg-gray-50 rounded border flex justify-between"><span>Total/Day (mWh)</span><span>${fmt(v.Eday_mWh,6)}</span></div>
-    <div class="p-2 bg-gray-50 rounded border flex justify-between"><span>Darkness Energy (mWh)</span><span>${fmt(v.E_dark_mWh,6)}</span></div>
-    <div class="p-2 bg-gray-50 rounded border flex justify-between"><span>Min Storage (mWh)</span><span>${fmt(v.E_min_mWh,6)}</span></div>
-    <div class="p-2 bg-gray-50 rounded border flex justify-between"><span>Monthly Self-discharge (%)</span><span>${fmt(v.SdMonthly,2)}</span></div>
-    <div class="p-2 bg-gray-50 rounded border flex justify-between"><span>Storage Loss (mWh)</span><span>${fmt(v.Eloss_mWh,6)}</span></div>
-    <div class="p-2 bg-gray-50 rounded border flex justify-between"><span>Total Storage (mWh)</span><span>${fmt(v.EstorTot_mWh,6)}</span></div>
-    <div class="p-2 bg-gray-50 rounded border flex justify-between"><span>Pristine (mW/cm²)</span><span>${fmt(v.pristine_mWcm2,6)}</span></div>
-    <div class="p-2 bg-gray-50 rounded border flex justify-between"><span>Degradation (mW/cm²)</span><span>${fmt(v.degr_mWcm2,6)}</span></div>
-    <div class="p-2 bg-gray-50 rounded border flex justify-between"><span>EOL (mW/cm²)</span><span>${fmt(v.EOL_mWcm2,6)}</span></div>
-    <div class="p-2 bg-gray-50 rounded border flex justify-between"><span>Harvest/Day (mWh/cm²)</span><span>${fmt(v.harvest_mWh_cm2_day,6)}</span></div>
-    <div class="p-2 bg-gray-50 rounded border flex justify-between"><span>Area (cm²)</span><span>${fmt(v.Area_cm2,4)}</span></div>
-    <div class="p-2 bg-gray-50 rounded border flex justify-between"><span>Side (cm)</span><span>${fmt(v.Side_cm,4)}</span></div>
-    <div class="p-2 bg-gray-50 rounded border flex justify-between"><span>PM Eff (%)</span><span>${fmt(v.eff,2)}</span></div>
-    <div class="p-2 bg-gray-50 rounded border flex justify-between"><span>PV/day (mWh)</span><span>${fmt(v.PV_day,6)}</span></div>
-    <div class="p-2 bg-gray-50 rounded border flex justify-between"><span>Delivered/day (mWh)</span><span>${fmt(v.PM_day,6)}</span></div>
-    <div class="p-2 bg-gray-50 rounded border flex justify-between"><span>Module Cost ($)</span><span>${fmt(v.costModule,2)}</span></div>
-    <div class="p-2 bg-gray-50 rounded border flex justify-between"><span>PMIC Cost ($)</span><span>${fmt(v.costPMIC,2)}</span></div>
-    <div class="p-2 bg-gray-50 rounded border flex justify-between"><span>Storage Cost ($)</span><span>${fmt(v.costStorage,2)}</span></div>
-  `;
-  openModal(byId('modalCalcs'));
-});
-byId('closeCalcs').addEventListener('click', ()=>closeModal(byId('modalCalcs')));
-
-byId('btnPrices').addEventListener('click', ()=>{
-  // slider + fields
-  byId('priceModulePerCm2Range').value = prices.modulePerCm2;
-  syncPriceSliderUI();
-  byId('p_pmic').value = prices.pmic.PMIC;
-  byId('p_disc').value = prices.pmic.Discrete;
-  byId('p_dir').value  = prices.pmic.Direct;
-  byId('s_CR').value = prices.storagePerWh.CR;
-  byId('s_LiPo').value = prices.storagePerWh.LiPo;
-  byId('s_LiFePO').value = prices.storagePerWh.LiFePO;
-  byId('s_LTO').value = prices.storagePerWh.LTO;
-  byId('s_NiMH').value = prices.storagePerWh.NiMH;
-  byId('s_Supercap').value = prices.storagePerWh.Supercap;
-  byId('s_Hybridcap').value = prices.storagePerWh.Hybridcap;
-  openModal(byId('modalPrices'));
-});
-byId('closePrices').addEventListener('click', ()=>closeModal(byId('modalPrices')));
-
-if (priceRange){ priceRange.addEventListener('input', syncPriceSliderUI); }
-
-byId('applyPrices').addEventListener('click', ()=>{
-  prices.modulePerCm2 = parseFloat(byId('priceModulePerCm2Range').value)||prices.modulePerCm2;
-  prices.pmic.PMIC = parseFloat(byId('p_pmic').value)||prices.pmic.PMIC;
-  prices.pmic.Discrete = parseFloat(byId('p_disc').value)||prices.pmic.Discrete;
-  prices.pmic.Direct = parseFloat(byId('p_dir').value)||prices.pmic.Direct;
-  prices.storagePerWh.CR = parseFloat(byId('s_CR').value)||prices.storagePerWh.CR;
-  prices.storagePerWh.LiPo = parseFloat(byId('s_LiPo').value)||prices.storagePerWh.LiPo;
-  prices.storagePerWh.LiFePO = parseFloat(byId('s_LiFePO').value)||prices.storagePerWh.LiFePO;
-  prices.storagePerWh.LTO = parseFloat(byId('s_LTO').value)||prices.storagePerWh.LTO;
-  prices.storagePerWh.NiMH = parseFloat(byId('s_NiMH').value)||prices.storagePerWh.NiMH;
-  prices.storagePerWh.Supercap = parseFloat(byId('s_Supercap').value)||prices.storagePerWh.Supercap;
-  prices.storagePerWh.Hybridcap = parseFloat(byId('s_Hybridcap').value)||prices.storagePerWh.Hybridcap;
-  closeModal(byId('modalPrices'));
-  calculate();
-});
-
-byId('resetPrices').addEventListener('click', ()=>{
-  prices = JSON.parse(JSON.stringify(defaultPrices));
-  byId('priceModulePerCm2Range').value = prices.modulePerCm2;
-  syncPriceSliderUI();
-  byId('p_pmic').value = prices.pmic.PMIC;
-  byId('p_disc').value = prices.pmic.Discrete;
-  byId('p_dir').value  = prices.pmic.Direct;
-  byId('s_CR').value = prices.storagePerWh.CR;
-  byId('s_LiPo').value = prices.storagePerWh.LiPo;
-  byId('s_LiFePO').value = prices.storagePerWh.LiFePO;
-  byId('s_LTO').value = prices.storagePerWh.LTO;
-  byId('s_NiMH').value = prices.storagePerWh.NiMH;
-  byId('s_Supercap').value = prices.storagePerWh.Supercap;
-  byId('s_Hybridcap').value = prices.storagePerWh.Hybridcap;
-});
-
-/* ---------- Init ---------- */
-syncPriceSliderUI();
-calculate();
 </script>
 </body>
 </html>
